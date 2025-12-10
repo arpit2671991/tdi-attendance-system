@@ -16,6 +16,8 @@ import Reports from "@/pages/Reports";
 import TeacherPortal from "@/pages/TeacherPortal";
 import NotFound from "@/pages/not-found";
 
+import Admins from "@/pages/Admins";
+
 // Protected Route Wrapper
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
   const { currentUser } = useData();
@@ -51,6 +53,9 @@ function Router() {
       </Route>
       <Route path="/teachers">
         <ProtectedRoute component={Teachers} allowedRoles={['admin']} />
+      </Route>
+      <Route path="/admins">
+        <ProtectedRoute component={Admins} allowedRoles={['admin']} />
       </Route>
       <Route path="/students">
         <ProtectedRoute component={Students} allowedRoles={['admin']} />

@@ -11,6 +11,13 @@ export interface Teacher {
   password?: string;
 }
 
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export interface User {
 
 interface DataContextType {
   teachers: Teacher[];
+  admins: Admin[];
   students: Student[];
   sessions: Session[];
   attendance: AttendanceRecord[];
@@ -60,6 +68,9 @@ interface DataContextType {
   updateTeacher: (id: string, teacher: Partial<Teacher>) => void;
   deleteTeacher: (id: string) => void;
 
+  addAdmin: (admin: Omit<Admin, 'id'>) => void;
+  deleteAdmin: (id: string) => void;
+
   addStudent: (student: Omit<Student, 'id'>) => void;
   updateStudent: (id: string, student: Partial<Student>) => void;
   deleteStudent: (id: string) => void;
@@ -73,10 +84,15 @@ interface DataContextType {
   // Analytics
   getTeacherWorkHours: (teacherId: string, month: Date) => number;
   getStudentAttendanceRate: (studentId: string, month: Date) => number;
+  getStudentAttendanceReport: (filters: { date?: Date, month?: Date, year?: number }) => { studentId: string, present: number, total: number }[];
   getSessionAttendance: (sessionId: string, date: Date) => AttendanceRecord | undefined;
 }
 
 // --- Mock Data ---
+
+const initialAdmins: Admin[] = [
+    { id: 'admin1', name: 'System Admin', email: 'admin@school.edu', password: 'admin123' }
+];
 
 const initialTeachers: Teacher[] = [
   { id: 't1', name: 'Sarah Wilson', email: 'sarah@school.edu', department: 'Mathematics', password: 'password123' },
@@ -171,6 +187,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
+  const [admins, setAdmins] = useState<Admin[]>(initialAdmins);
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -183,8 +200,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Auth Methods
   const login = (email: string, password: string, role: 'admin' | 'teacher'): boolean => {
     if (role === 'admin') {
-      if (email === 'admin@school.edu' && password === 'admin123') {
-        setCurrentUser({ id: 'admin', name: 'Admin User', role: 'admin', email });
+      const admin = admins.find(a => a.email === email && a.password === password);
+      if (admin) {
+        setCurrentUser({ id: admin.id, name: admin.name, role: 'admin', email });
         return true;
       }
     } else {
@@ -212,6 +230,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTeachers(teachers.filter(t => t.id !== id));
     // Also remove sessions assigned to this teacher? Or set them to unassigned?
     // For simplicity, we'll keep them but they'll have invalid teacherId
+  };
+
+  // Admins CRUD
+  const addAdmin = (admin: Omit<Admin, 'id'>) => {
+    setAdmins([...admins, { ...admin, id: Math.random().toString(36).substr(2, 9) }]);
+  };
+  const deleteAdmin = (id: string) => {
+    setAdmins(admins.filter(a => a.id !== id));
   };
 
   // Students CRUD
@@ -274,10 +300,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return sessionIds.includes(r.sessionId) && d >= start && d <= end;
      });
 
-     if (relevantRecords.length === 0) return 100; // No classes held? Perfect attendance logic or N/A
+     if (relevantRecords.length === 0) return 0; // Changed default to 0 for clarity if no sessions
 
      const presentCount = relevantRecords.filter(r => r.presentStudentIds.includes(studentId)).length;
      return (presentCount / relevantRecords.length) * 100;
+  };
+
+  const getStudentAttendanceReport = (filters: { date?: Date, month?: Date, year?: number }) => {
+    let filteredRecords = attendance;
+
+    if (filters.date) {
+        const dateStr = format(filters.date, 'yyyy-MM-dd');
+        filteredRecords = attendance.filter(r => r.date === dateStr);
+    } else if (filters.month) {
+        const start = startOfMonth(filters.month);
+        const end = endOfMonth(filters.month);
+        filteredRecords = attendance.filter(r => {
+            const d = new Date(r.date);
+            return d >= start && d <= end;
+        });
+    } else if (filters.year) {
+        filteredRecords = attendance.filter(r => new Date(r.date).getFullYear() === filters.year);
+    }
+
+    return students.map(student => {
+        // Only count sessions where the student is enrolled
+        const studentSessions = sessions.filter(s => s.studentIds.includes(student.id)).map(s => s.id);
+        const relevantRecords = filteredRecords.filter(r => studentSessions.includes(r.sessionId));
+        
+        const presentCount = relevantRecords.filter(r => r.presentStudentIds.includes(student.id)).length;
+        
+        return {
+            studentId: student.id,
+            present: presentCount,
+            total: relevantRecords.length
+        };
+    });
   };
 
   const getSessionAttendance = (sessionId: string, date: Date) => {
@@ -287,13 +345,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <DataContext.Provider value={{ 
-      teachers, students, sessions, attendance, currentUser,
+      teachers, admins, students, sessions, attendance, currentUser,
       login, logout,
       addTeacher, updateTeacher, deleteTeacher,
+      addAdmin, deleteAdmin,
       addStudent, updateStudent, deleteStudent,
       addSession, updateSession, deleteSession,
       markAttendance,
-      getTeacherWorkHours, getStudentAttendanceRate, getSessionAttendance
+      getTeacherWorkHours, getStudentAttendanceRate, getStudentAttendanceReport, getSessionAttendance
     }}>
       {children}
     </DataContext.Provider>

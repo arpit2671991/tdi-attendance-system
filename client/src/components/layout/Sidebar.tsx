@@ -8,13 +8,15 @@ import {
   BarChart3, 
   CheckSquare,
   School,
-  LogOut
+  LogOut,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Admins', href: '/admins', icon: ShieldCheck },
   { name: 'Teachers', href: '/teachers', icon: Users },
   { name: 'Students', href: '/students', icon: GraduationCap },
   { name: 'Sessions', href: '/sessions', icon: CalendarDays },
