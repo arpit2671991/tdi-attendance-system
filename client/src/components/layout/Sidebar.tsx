@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useData } from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
 import { 
   LayoutDashboard, 
   Users, 
@@ -25,19 +25,19 @@ const adminNavigation = [
 
 const teacherNavigation = [
   { name: 'My Attendance', href: '/portal', icon: CheckSquare },
-  { name: 'My Reports', href: '/reports', icon: BarChart3 }, // Teachers can see reports too? Or restricted?
+  { name: 'My Reports', href: '/reports', icon: BarChart3 },
 ];
 
 export function Sidebar() {
   const [location, setLocation] = useLocation();
-  const { currentUser, logout } = useData();
+  const { user, logout } = useAuth();
 
-  if (!currentUser) return null; // Shouldn't happen if protected, but good for safety
+  if (!user) return null;
 
-  const navigation = currentUser.role === 'admin' ? adminNavigation : teacherNavigation;
+  const navigation = user.role === 'admin' ? adminNavigation : teacherNavigation;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setLocation("/login");
   };
 
@@ -51,7 +51,7 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-3">
           <div className="mb-4 px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            {currentUser.role === 'admin' ? 'Administration' : 'Faculty Portal'}
+            {user.role === 'admin' ? 'Administration' : 'Faculty Portal'}
           </div>
           {navigation.map((item) => {
             const isActive = location === item.href;
@@ -77,11 +77,11 @@ export function Sidebar() {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="h-9 w-9 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold">
-            {currentUser.name.substring(0, 2).toUpperCase()}
+            {user.name.substring(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-medium truncate">{currentUser.name}</span>
-            <span className="text-xs text-sidebar-foreground/50 truncate capitalize">{currentUser.role}</span>
+            <span className="text-sm font-medium truncate">{user.name}</span>
+            <span className="text-xs text-sidebar-foreground/50 truncate capitalize">{user.role}</span>
           </div>
         </div>
         <Button 

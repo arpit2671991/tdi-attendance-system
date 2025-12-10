@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { useData, Teacher } from "@/lib/store";
+import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher } from "@/lib/hooks";
+import type { Teacher } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Mail, BookOpen, Pencil, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Teachers() {
-  const { teachers, addTeacher, updateTeacher, deleteTeacher } = useData();
-  const { toast } = useToast();
+  const { data: teachers = [], isLoading } = useTeachers();
+  const createTeacher = useCreateTeacher();
+  const updateTeacher = useUpdateTeacher();
+  const deleteTeacher = useDeleteTeacher();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Form State
   const [formData, setFormData] = useState({ name: "", email: "", department: "", password: "" });
 
   const filteredTeachers = teachers.filter(t => 
@@ -24,10 +27,10 @@ export default function Teachers() {
     t.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenDialog = (teacher?: Teacher) => {
+  const handleOpenDialog = (teacher?: Omit<Teacher, "password"> | Teacher) => {
     if (teacher) {
       setEditingId(teacher.id);
-      setFormData({ name: teacher.name, email: teacher.email, department: teacher.department, password: teacher.password || "" });
+      setFormData({ name: teacher.name, email: teacher.email, department: teacher.department, password: "" });
     } else {
       setEditingId(null);
       setFormData({ name: "", email: "", department: "", password: "" });
@@ -35,23 +38,53 @@ export default function Teachers() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name || !formData.email) return;
     
     if (editingId) {
-      updateTeacher(editingId, formData);
-      toast({ title: "Teacher Updated", description: "Record updated successfully." });
+      const updateData: any = { 
+        name: formData.name, 
+        email: formData.email, 
+        department: formData.department 
+      };
+      if (formData.password) {
+        updateData.password = formData.password;
+      }
+      await updateTeacher.mutateAsync({ id: editingId, data: updateData });
     } else {
-      addTeacher(formData);
-      toast({ title: "Teacher Added", description: `${formData.name} has been added.` });
+      if (!formData.password) return;
+      await createTeacher.mutateAsync(formData);
     }
     setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteTeacher(id);
-    toast({ title: "Teacher Deleted", description: "Record removed permanently." });
+  const handleDelete = async (id: string) => {
+    await deleteTeacher.mutateAsync(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Teachers</h1>
+            <p className="text-muted-foreground">Manage faculty members and departments.</p>
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -61,12 +94,11 @@ export default function Teachers() {
           <p className="text-muted-foreground">Manage faculty members and departments.</p>
         </div>
         
-        <Button className="gap-2" onClick={() => handleOpenDialog()}>
+        <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-teacher">
           <Plus className="h-4 w-4" /> Add Teacher
         </Button>
       </div>
 
-      {/* Edit/Add Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -82,6 +114,7 @@ export default function Teachers() {
                 placeholder="e.g. Dr. Jane Smith" 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
+                data-testid="input-teacher-name"
               />
             </div>
             <div className="space-y-2">
@@ -91,6 +124,7 @@ export default function Teachers() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                data-testid="input-teacher-email"
               />
             </div>
             <div className="space-y-2">
@@ -99,21 +133,29 @@ export default function Teachers() {
                 placeholder="e.g. Mathematics" 
                 value={formData.department}
                 onChange={(e) => setFormData({...formData, department: e.target.value})}
+                data-testid="input-teacher-department"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
+              <label className="text-sm font-medium">Password {editingId && "(leave blank to keep unchanged)"}</label>
               <Input 
                 placeholder="Set login password" 
                 type="text"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+                data-testid="input-teacher-password"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{editingId ? 'Save Changes' : 'Add Teacher'}</Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={createTeacher.isPending || updateTeacher.isPending}
+              data-testid="button-submit-teacher"
+            >
+              {editingId ? 'Save Changes' : 'Add Teacher'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -128,6 +170,7 @@ export default function Teachers() {
               className="pl-8" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-teachers"
             />
           </div>
         </CardHeader>
@@ -143,7 +186,7 @@ export default function Teachers() {
             </TableHeader>
             <TableBody>
               {filteredTeachers.map((teacher) => (
-                <TableRow key={teacher.id}>
+                <TableRow key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
                       {teacher.name.substring(0,2).toUpperCase()}
@@ -164,13 +207,22 @@ export default function Teachers() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(teacher)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleOpenDialog(teacher)}
+                        data-testid={`button-edit-teacher-${teacher.id}`}
+                      >
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            data-testid={`button-delete-teacher-${teacher.id}`}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </AlertDialogTrigger>
@@ -183,7 +235,13 @@ export default function Teachers() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(teacher.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                              onClick={() => handleDelete(teacher.id)}
+                              disabled={deleteTeacher.isPending}
+                            >
+                              Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>

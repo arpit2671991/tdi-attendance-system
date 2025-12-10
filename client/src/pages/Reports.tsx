@@ -1,75 +1,97 @@
 import { useState } from "react";
-import { useData } from "@/lib/store";
+import { useTeachers, useStudents, useTeacherWorkHours, useStudentAttendanceReport } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
-import { format, subMonths, startOfYear } from "date-fns";
-import { Calendar as CalendarIcon, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format, subMonths } from "date-fns";
+import { Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Reports() {
-  const { teachers, students, getTeacherWorkHours, getStudentAttendanceReport } = useData();
+  const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
+  const { data: students = [], isLoading: loadingStudents } = useStudents();
   
-  // Teacher Report State
   const [teacherReportMonth, setTeacherReportMonth] = useState<Date>(new Date());
+  const [teacherNameFilter, setTeacherNameFilter] = useState("");
   
-  // Student Report State
   const [filterType, setFilterType] = useState<'day' | 'month' | 'year'>('month');
   const [filterDate, setFilterDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+  const [studentNameFilter, setStudentNameFilter] = useState("");
 
+  const teacherFilters: any = {
+    startDate: format(new Date(teacherReportMonth.getFullYear(), teacherReportMonth.getMonth(), 1), 'yyyy-MM-dd'),
+    endDate: format(new Date(teacherReportMonth.getFullYear(), teacherReportMonth.getMonth() + 1, 0), 'yyyy-MM-dd')
+  };
 
-  // --- Teacher Data Prep ---
-  const teacherHoursData = teachers.map(teacher => ({
-    name: teacher.name,
-    hours: getTeacherWorkHours(teacher.id, teacherReportMonth).toFixed(1),
-  }));
-
-  // --- Student Data Prep ---
-  let studentReportData = [];
+  let studentFilters: any = {};
   if (filterType === 'day') {
-      const date = new Date(filterDate);
-      const report = getStudentAttendanceReport({ date });
-      studentReportData = report.map(r => {
-          const s = students.find(st => st.id === r.studentId);
-          return {
-              name: s?.name || 'Unknown',
-              rate: r.total > 0 ? (r.present / r.total) * 100 : 0,
-              present: r.present,
-              total: r.total,
-              grade: s?.grade
-          };
-      });
+    studentFilters.startDate = filterDate;
+    studentFilters.endDate = filterDate;
   } else if (filterType === 'month') {
-      const report = getStudentAttendanceReport({ month: filterMonth });
-      studentReportData = report.map(r => {
-          const s = students.find(st => st.id === r.studentId);
-          return {
-              name: s?.name || 'Unknown',
-              rate: r.total > 0 ? (r.present / r.total) * 100 : 0,
-              present: r.present,
-              total: r.total,
-              grade: s?.grade
-          };
-      });
+    studentFilters.startDate = format(new Date(filterMonth.getFullYear(), filterMonth.getMonth(), 1), 'yyyy-MM-dd');
+    studentFilters.endDate = format(new Date(filterMonth.getFullYear(), filterMonth.getMonth() + 1, 0), 'yyyy-MM-dd');
   } else {
-      const report = getStudentAttendanceReport({ year: parseInt(filterYear) });
-      studentReportData = report.map(r => {
-          const s = students.find(st => st.id === r.studentId);
-          return {
-              name: s?.name || 'Unknown',
-              rate: r.total > 0 ? (r.present / r.total) * 100 : 0,
-              present: r.present,
-              total: r.total,
-              grade: s?.grade
-          };
-      });
+    studentFilters.startDate = `${filterYear}-01-01`;
+    studentFilters.endDate = `${filterYear}-12-31`;
   }
 
-  // Sort by name
-  studentReportData.sort((a, b) => a.name.localeCompare(b.name));
+  const { data: teacherWorkHoursRaw = {}, isLoading: loadingTeacherHours } = useTeacherWorkHours(teacherFilters);
+  const { data: studentAttendanceRaw = [], isLoading: loadingStudentAttendance } = useStudentAttendanceReport(studentFilters);
+
+  const teacherHoursData = Object.entries(teacherWorkHoursRaw)
+    .map(([teacherId, hours]) => {
+      const teacher = teachers.find(t => t.id === teacherId);
+      return {
+        id: teacherId,
+        name: teacher?.name || 'Unknown',
+        hours: (hours as number).toFixed(1),
+      };
+    })
+    .filter(record => 
+      record.name.toLowerCase().includes(teacherNameFilter.toLowerCase())
+    );
+
+  const studentReportData = studentAttendanceRaw
+    .map(record => {
+      const student = students.find(s => s.id === record.studentId);
+      return {
+        id: record.studentId,
+        name: student?.name || 'Unknown',
+        grade: student?.grade || 'N/A',
+        rate: record.total > 0 ? (record.present / record.total) * 100 : 0,
+        present: record.present,
+        total: record.total,
+      };
+    })
+    .filter(record => 
+      record.name.toLowerCase().includes(studentNameFilter.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const isLoading = loadingTeachers || loadingStudents || loadingTeacherHours || loadingStudentAttendance;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Reports & Analytics</h1>
+          <p className="text-muted-foreground">Comprehensive insights into school performance.</p>
+        </div>
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -84,14 +106,23 @@ export default function Reports() {
           <TabsTrigger value="students">Student Attendance</TabsTrigger>
         </TabsList>
 
-        {/* TEACHER REPORTS */}
         <TabsContent value="teachers" className="space-y-6">
-          <div className="flex justify-end">
+          <div className="flex flex-col md:flex-row gap-4 justify-between">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Filter by teacher name..." 
+                className="pl-8" 
+                value={teacherNameFilter}
+                onChange={(e) => setTeacherNameFilter(e.target.value)}
+                data-testid="input-filter-teacher-name"
+              />
+            </div>
             <Select 
               value={teacherReportMonth.toISOString()} 
               onValueChange={(val) => setTeacherReportMonth(new Date(val))}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px]" data-testid="select-teacher-month">
                 <SelectValue placeholder="Select Month" />
               </SelectTrigger>
               <SelectContent>
@@ -109,15 +140,21 @@ export default function Reports() {
                 <CardDescription>Total duration of sessions taught in {format(teacherReportMonth, 'MMMM')}</CardDescription>
               </CardHeader>
               <CardContent className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={teacherHoursData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" unit="h" />
-                    <YAxis dataKey="name" type="category" width={100} />
-                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                    <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {teacherHoursData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={teacherHoursData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" unit="h" />
+                      <YAxis dataKey="name" type="category" width={100} />
+                      <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                      <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -136,8 +173,8 @@ export default function Reports() {
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-border/50">
-                       {teacherHoursData.map((row, i) => (
-                         <tr key={i} className="hover:bg-muted/50 transition-colors">
+                       {teacherHoursData.map((row) => (
+                         <tr key={row.id} className="hover:bg-muted/50 transition-colors">
                            <td className="px-4 py-3 font-medium">{row.name}</td>
                            <td className="px-4 py-3 font-bold">{row.hours}h</td>
                            <td className="px-4 py-3">
@@ -149,6 +186,13 @@ export default function Reports() {
                            </td>
                          </tr>
                        ))}
+                       {teacherHoursData.length === 0 && (
+                         <tr>
+                           <td colSpan={3} className="text-center py-8 text-muted-foreground">
+                             No matching records found
+                           </td>
+                         </tr>
+                       )}
                      </tbody>
                    </table>
                  </div>
@@ -157,7 +201,6 @@ export default function Reports() {
           </div>
         </TabsContent>
 
-        {/* STUDENT REPORTS */}
         <TabsContent value="students" className="space-y-6">
           <Card className="border-none shadow-sm bg-muted/30">
             <CardContent className="pt-6">
@@ -165,27 +208,39 @@ export default function Reports() {
                 <div className="space-y-2 w-full md:w-auto">
                    <label className="text-sm font-medium">Filter By</label>
                    <div className="flex rounded-md shadow-sm">
-                     <Button 
-                       variant={filterType === 'day' ? "default" : "outline"} 
-                       className="rounded-r-none w-20"
+                     <button 
+                       className={`px-4 py-2 text-sm font-medium rounded-l-md border ${
+                         filterType === 'day' 
+                           ? 'bg-primary text-primary-foreground border-primary' 
+                           : 'bg-background border-input hover:bg-accent'
+                       }`}
                        onClick={() => setFilterType('day')}
+                       data-testid="button-filter-day"
                      >
                        Day
-                     </Button>
-                     <Button 
-                       variant={filterType === 'month' ? "default" : "outline"} 
-                       className="rounded-none w-20 border-l-0 border-r-0"
+                     </button>
+                     <button 
+                       className={`px-4 py-2 text-sm font-medium border-t border-b ${
+                         filterType === 'month' 
+                           ? 'bg-primary text-primary-foreground border-primary' 
+                           : 'bg-background border-input hover:bg-accent'
+                       }`}
                        onClick={() => setFilterType('month')}
+                       data-testid="button-filter-month"
                      >
                        Month
-                     </Button>
-                     <Button 
-                       variant={filterType === 'year' ? "default" : "outline"} 
-                       className="rounded-l-none w-20"
+                     </button>
+                     <button 
+                       className={`px-4 py-2 text-sm font-medium rounded-r-md border ${
+                         filterType === 'year' 
+                           ? 'bg-primary text-primary-foreground border-primary' 
+                           : 'bg-background border-input hover:bg-accent'
+                       }`}
                        onClick={() => setFilterType('year')}
+                       data-testid="button-filter-year"
                      >
                        Year
-                     </Button>
+                     </button>
                    </div>
                 </div>
 
@@ -197,6 +252,7 @@ export default function Reports() {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
+                        data-testid="input-filter-date"
                       />
                    )}
                    {filterType === 'month' && (
@@ -204,11 +260,10 @@ export default function Reports() {
                         value={filterMonth.toISOString()} 
                         onValueChange={(val) => setFilterMonth(new Date(val))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger data-testid="select-filter-month">
                           <SelectValue placeholder="Select Month" />
                         </SelectTrigger>
                         <SelectContent>
-                           {/* Generate last 12 months */}
                            {Array.from({ length: 12 }).map((_, i) => {
                               const d = subMonths(new Date(), i);
                               return <SelectItem key={i} value={d.toISOString()}>{format(d, 'MMMM yyyy')}</SelectItem>
@@ -221,7 +276,7 @@ export default function Reports() {
                         value={filterYear} 
                         onValueChange={setFilterYear}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger data-testid="select-filter-year">
                           <SelectValue placeholder="Select Year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -231,6 +286,20 @@ export default function Reports() {
                         </SelectContent>
                       </Select>
                    )}
+                </div>
+
+                <div className="space-y-2 flex-1">
+                  <label className="text-sm font-medium">Filter by Name</label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Student name..." 
+                      className="pl-8" 
+                      value={studentNameFilter}
+                      onChange={(e) => setStudentNameFilter(e.target.value)}
+                      data-testid="input-filter-student-name"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -256,8 +325,8 @@ export default function Reports() {
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-border/50">
-                     {studentReportData.map((row, i) => (
-                       <tr key={i} className="hover:bg-muted/50 transition-colors">
+                     {studentReportData.map((row) => (
+                       <tr key={row.id} className="hover:bg-muted/50 transition-colors">
                          <td className="px-4 py-3 font-medium">{row.name}</td>
                          <td className="px-4 py-3 text-muted-foreground">{row.grade}</td>
                          <td className="px-4 py-3 font-bold">
@@ -287,7 +356,7 @@ export default function Reports() {
                      ))}
                      {studentReportData.length === 0 && (
                         <tr>
-                            <td colSpan={5} className="text-center py-8 text-muted-foreground">No records found for this period.</td>
+                            <td colSpan={5} className="text-center py-8 text-muted-foreground">No matching records found for this period.</td>
                         </tr>
                      )}
                    </tbody>

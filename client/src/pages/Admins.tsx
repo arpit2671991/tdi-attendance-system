@@ -1,17 +1,23 @@
 import { useState } from "react";
-import { useData, Admin } from "@/lib/store";
+import { useAdmins, useCreateAdmin, useDeleteAdmin } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Mail, KeyRound, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Plus, Search, Mail, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Admins() {
-  const { admins, addAdmin, deleteAdmin, currentUser } = useData();
+  const { data: admins = [], isLoading } = useAdmins();
+  const createAdmin = useCreateAdmin();
+  const deleteAdmin = useDeleteAdmin();
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -27,28 +33,49 @@ export default function Admins() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name || !formData.email || !formData.password) return;
     
-    // Simple validation
     if (admins.some(a => a.email === formData.email)) {
         toast({ title: "Error", description: "Email already exists", variant: "destructive" });
         return;
     }
 
-    addAdmin(formData);
-    toast({ title: "Admin Added", description: `${formData.name} has been granted admin access.` });
+    await createAdmin.mutateAsync(formData);
     setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (id === currentUser?.id) {
         toast({ title: "Action Denied", description: "You cannot delete your own account.", variant: "destructive" });
         return;
     }
-    deleteAdmin(id);
-    toast({ title: "Admin Removed", description: "Access revoked." });
+    await deleteAdmin.mutateAsync(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Administrators</h1>
+            <p className="text-muted-foreground">Manage system access and admin privileges.</p>
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -58,7 +85,7 @@ export default function Admins() {
           <p className="text-muted-foreground">Manage system access and admin privileges.</p>
         </div>
         
-        <Button className="gap-2" onClick={handleOpenDialog}>
+        <Button className="gap-2" onClick={handleOpenDialog} data-testid="button-add-admin">
           <Plus className="h-4 w-4" /> Add Admin
         </Button>
       </div>
@@ -78,6 +105,7 @@ export default function Admins() {
                 placeholder="e.g. John Doe" 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
+                data-testid="input-admin-name"
               />
             </div>
             <div className="space-y-2">
@@ -87,6 +115,7 @@ export default function Admins() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                data-testid="input-admin-email"
               />
             </div>
             <div className="space-y-2">
@@ -96,12 +125,19 @@ export default function Admins() {
                 type="text"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+                data-testid="input-admin-password"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>Create Admin</Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={createAdmin.isPending}
+              data-testid="button-submit-admin"
+            >
+              Create Admin
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -116,6 +152,7 @@ export default function Admins() {
               className="pl-8" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-admins"
             />
           </div>
         </CardHeader>
@@ -130,7 +167,7 @@ export default function Admins() {
             </TableHeader>
             <TableBody>
               {filteredAdmins.map((admin) => (
-                <TableRow key={admin.id}>
+                <TableRow key={admin.id} data-testid={`row-admin-${admin.id}`}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary text-xs font-bold">
                       {admin.name.substring(0,2).toUpperCase()}
@@ -151,7 +188,11 @@ export default function Admins() {
                       {admin.id !== currentUser?.id && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                data-testid={`button-delete-admin-${admin.id}`}
+                              >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </AlertDialogTrigger>
@@ -164,7 +205,13 @@ export default function Admins() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(admin.id)}>Delete</AlertDialogAction>
+                                <AlertDialogAction 
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                                  onClick={() => handleDelete(admin.id)}
+                                  disabled={deleteAdmin.isPending}
+                                >
+                                  Delete
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>

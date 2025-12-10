@@ -2,7 +2,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { DataProvider, useData } from "./lib/store";
+import { AuthProvider, useAuth } from "./lib/auth-context";
 import { Layout } from "./components/layout/Layout";
 import { useEffect } from "react";
 
@@ -20,20 +20,20 @@ import Admins from "@/pages/Admins";
 
 // Protected Route Wrapper
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
-  const { currentUser } = useData();
+  const { user, loading } = useAuth();
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!loading && !user) {
       setLocation("/login");
-    } else if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
-      // Redirect if role not allowed (e.g. teacher trying to access admin page)
-      setLocation(currentUser.role === 'admin' ? '/' : '/portal');
+    } else if (!loading && user && allowedRoles && !allowedRoles.includes(user.role)) {
+      setLocation(user.role === 'admin' ? '/' : '/portal');
     }
-  }, [currentUser, location, setLocation, allowedRoles]);
+  }, [user, loading, location, setLocation, allowedRoles]);
 
-  if (!currentUser) return null;
-  if (allowedRoles && !allowedRoles.includes(currentUser.role)) return null;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!user) return null;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return null;
 
   return (
     <Layout>
@@ -42,10 +42,25 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: Rea
   );
 }
 
+function LoginRoute() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      setLocation(user.role === 'admin' ? '/' : '/portal');
+    }
+  }, [user, setLocation]);
+
+  if (user) return null;
+
+  return <Login />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
+      <Route path="/login" component={LoginRoute} />
       
       {/* Admin Routes */}
       <Route path="/">
@@ -80,10 +95,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <DataProvider>
+      <AuthProvider>
         <Toaster />
         <Router />
-      </DataProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

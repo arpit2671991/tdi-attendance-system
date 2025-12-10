@@ -1,17 +1,21 @@
 import { useState } from "react";
-import { useData, Student } from "@/lib/store";
+import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent } from "@/lib/hooks";
+import type { Student } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, User, Pencil, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Students() {
-  const { students, addStudent, updateStudent, deleteStudent } = useData();
-  const { toast } = useToast();
+  const { data: students = [], isLoading } = useStudents();
+  const createStudent = useCreateStudent();
+  const updateStudent = useUpdateStudent();
+  const deleteStudent = useDeleteStudent();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,23 +38,44 @@ export default function Students() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name || !formData.grade) return;
     
     if (editingId) {
-      updateStudent(editingId, formData);
-      toast({ title: "Student Updated", description: "Record updated successfully." });
+      await updateStudent.mutateAsync({ id: editingId, data: formData });
     } else {
-      addStudent(formData);
-      toast({ title: "Student Enrolled", description: `${formData.name} added to Grade ${formData.grade}.` });
+      await createStudent.mutateAsync(formData);
     }
     setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteStudent(id);
-    toast({ title: "Student Deleted", description: "Record removed permanently." });
+  const handleDelete = async (id: string) => {
+    await deleteStudent.mutateAsync(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Students</h1>
+            <p className="text-muted-foreground">Manage student enrollment and records.</p>
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -60,7 +85,7 @@ export default function Students() {
           <p className="text-muted-foreground">Manage student enrollment and records.</p>
         </div>
         
-        <Button className="gap-2" onClick={() => handleOpenDialog()}>
+        <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-student">
           <Plus className="h-4 w-4" /> Enroll Student
         </Button>
       </div>
@@ -80,6 +105,7 @@ export default function Students() {
                 placeholder="e.g. Alex Johnson" 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
+                data-testid="input-student-name"
               />
             </div>
             <div className="space-y-2">
@@ -88,12 +114,19 @@ export default function Students() {
                 placeholder="e.g. 10th Grade" 
                 value={formData.grade}
                 onChange={(e) => setFormData({...formData, grade: e.target.value})}
+                data-testid="input-student-grade"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{editingId ? 'Save Changes' : 'Enroll Student'}</Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={createStudent.isPending || updateStudent.isPending}
+              data-testid="button-submit-student"
+            >
+              {editingId ? 'Save Changes' : 'Enroll Student'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -108,6 +141,7 @@ export default function Students() {
               className="pl-8" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-students"
             />
           </div>
         </CardHeader>
@@ -122,7 +156,7 @@ export default function Students() {
             </TableHeader>
             <TableBody>
               {filteredStudents.map((student) => (
-                <TableRow key={student.id}>
+                <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground text-xs font-bold">
                       <User className="h-4 w-4" />
@@ -136,13 +170,22 @@ export default function Students() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(student)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleOpenDialog(student)}
+                        data-testid={`button-edit-student-${student.id}`}
+                      >
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            data-testid={`button-delete-student-${student.id}`}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </AlertDialogTrigger>
@@ -155,7 +198,13 @@ export default function Students() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(student.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                              onClick={() => handleDelete(student.id)}
+                              disabled={deleteStudent.isPending}
+                            >
+                              Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>

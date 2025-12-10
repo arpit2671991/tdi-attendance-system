@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useData } from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,32 +11,42 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login } = useData();
+  const { login } = useAuth();
   const { toast } = useToast();
   
   const [adminEmail, setAdminEmail] = useState("admin@school.edu");
   const [adminPassword, setAdminPassword] = useState("admin123");
+  const [adminLoading, setAdminLoading] = useState(false);
   
   const [teacherEmail, setTeacherEmail] = useState("sarah@school.edu");
   const [teacherPassword, setTeacherPassword] = useState("password123");
+  const [teacherLoading, setTeacherLoading] = useState(false);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(adminEmail, adminPassword, 'admin')) {
+    setAdminLoading(true);
+    try {
+      await login(adminEmail, adminPassword, 'admin');
       toast({ title: "Welcome back, Admin" });
       setLocation("/");
-    } else {
-      toast({ title: "Login Failed", description: "Invalid admin credentials", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Login Failed", description: error.message || "Invalid admin credentials", variant: "destructive" });
+    } finally {
+      setAdminLoading(false);
     }
   };
 
-  const handleTeacherLogin = (e: React.FormEvent) => {
+  const handleTeacherLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(teacherEmail, teacherPassword, 'teacher')) {
+    setTeacherLoading(true);
+    try {
+      await login(teacherEmail, teacherPassword, 'teacher');
       toast({ title: "Welcome back" });
       setLocation("/portal");
-    } else {
-      toast({ title: "Login Failed", description: "Invalid email or password", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Login Failed", description: error.message || "Invalid email or password", variant: "destructive" });
+    } finally {
+      setTeacherLoading(false);
     }
   };
 
@@ -97,7 +107,9 @@ export default function Login() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full">Login as Admin</Button>
+                  <Button type="submit" className="w-full" disabled={adminLoading} data-testid="button-admin-login">
+                    {adminLoading ? "Logging in..." : "Login as Admin"}
+                  </Button>
                 </CardFooter>
               </form>
             </Card>
@@ -142,7 +154,9 @@ export default function Login() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full">Login as Teacher</Button>
+                  <Button type="submit" className="w-full" disabled={teacherLoading} data-testid="button-teacher-login">
+                    {teacherLoading ? "Logging in..." : "Login as Teacher"}
+                  </Button>
                 </CardFooter>
               </form>
             </Card>
