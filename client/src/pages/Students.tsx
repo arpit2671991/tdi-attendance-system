@@ -1,36 +1,55 @@
 import { useState } from "react";
-import { useData } from "@/lib/store";
+import { useData, Student } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, User } from "lucide-react";
+import { Plus, Search, User, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Students() {
-  const { students, addStudent } = useData();
+  const { students, addStudent, updateStudent, deleteStudent } = useData();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [newStudent, setNewStudent] = useState({ name: "", grade: "" });
+  const [formData, setFormData] = useState({ name: "", grade: "" });
 
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.grade.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddStudent = () => {
-    if (!newStudent.name || !newStudent.grade) return;
+  const handleOpenDialog = (student?: Student) => {
+    if (student) {
+      setEditingId(student.id);
+      setFormData({ name: student.name, grade: student.grade });
+    } else {
+      setEditingId(null);
+      setFormData({ name: "", grade: "" });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (!formData.name || !formData.grade) return;
     
-    addStudent(newStudent);
-    setNewStudent({ name: "", grade: "" });
+    if (editingId) {
+      updateStudent(editingId, formData);
+      toast({ title: "Student Updated", description: "Record updated successfully." });
+    } else {
+      addStudent(formData);
+      toast({ title: "Student Enrolled", description: `${formData.name} added to Grade ${formData.grade}.` });
+    }
     setIsDialogOpen(false);
-    toast({
-      title: "Student Enrolled",
-      description: `${newStudent.name} added to Grade ${newStudent.grade}.`,
-    });
+  };
+
+  const handleDelete = (id: string) => {
+    deleteStudent(id);
+    toast({ title: "Student Deleted", description: "Record removed permanently." });
   };
 
   return (
@@ -41,44 +60,43 @@ export default function Students() {
           <p className="text-muted-foreground">Manage student enrollment and records.</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" /> Enroll Student
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Enroll New Student</DialogTitle>
-              <DialogDescription>
-                Add a new student to the system.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name</label>
-                <Input 
-                  placeholder="e.g. Alex Johnson" 
-                  value={newStudent.name}
-                  onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Grade / Class</label>
-                <Input 
-                  placeholder="e.g. 10th Grade" 
-                  value={newStudent.grade}
-                  onChange={(e) => setNewStudent({...newStudent, grade: e.target.value})}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddStudent}>Enroll Student</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button className="gap-2" onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4" /> Enroll Student
+        </Button>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Student' : 'Enroll New Student'}</DialogTitle>
+            <DialogDescription>
+              {editingId ? 'Update student details.' : 'Add a new student to the system.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Full Name</label>
+              <Input 
+                placeholder="e.g. Alex Johnson" 
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Grade / Class</label>
+              <Input 
+                placeholder="e.g. 10th Grade" 
+                value={formData.grade}
+                onChange={(e) => setFormData({...formData, grade: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmit}>{editingId ? 'Save Changes' : 'Enroll Student'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="border-none shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -117,7 +135,31 @@ export default function Students() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">Edit</Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(student)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove the student from the system and all enrolled sessions.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(student.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

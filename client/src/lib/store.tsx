@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, isWithinInterval } from 'date-fns';
 
 // --- Types ---
 
@@ -22,6 +22,8 @@ export interface Session {
   teacherId: string;
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
   studentIds: string[];
 }
 
@@ -34,15 +36,40 @@ export interface AttendanceRecord {
   durationHours: number; // Calculated based on session length
 }
 
+export interface User {
+  id: string;
+  name: string;
+  role: 'admin' | 'teacher';
+  email: string;
+}
+
 interface DataContextType {
   teachers: Teacher[];
   students: Student[];
   sessions: Session[];
   attendance: AttendanceRecord[];
+  currentUser: User | null;
+  
+  // Auth
+  login: (email: string, role: 'admin' | 'teacher') => boolean;
+  logout: () => void;
+
+  // CRUD
   addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
+  updateTeacher: (id: string, teacher: Partial<Teacher>) => void;
+  deleteTeacher: (id: string) => void;
+
   addStudent: (student: Omit<Student, 'id'>) => void;
+  updateStudent: (id: string, student: Partial<Student>) => void;
+  deleteStudent: (id: string) => void;
+
   addSession: (session: Omit<Session, 'id'>) => void;
+  updateSession: (id: string, session: Partial<Session>) => void;
+  deleteSession: (id: string) => void;
+
   markAttendance: (record: Omit<AttendanceRecord, 'id'>) => void;
+  
+  // Analytics
   getTeacherWorkHours: (teacherId: string, month: Date) => number;
   getStudentAttendanceRate: (studentId: string, month: Date) => number;
   getSessionAttendance: (sessionId: string, date: Date) => AttendanceRecord | undefined;
@@ -65,9 +92,36 @@ const initialStudents: Student[] = [
 ];
 
 const initialSessions: Session[] = [
-  { id: 'ses1', name: 'Algebra 101', teacherId: 't1', startTime: '09:00', endTime: '10:30', studentIds: ['s1', 's2', 's5'] },
-  { id: 'ses2', name: 'Physics Lab', teacherId: 't2', startTime: '11:00', endTime: '12:30', studentIds: ['s1', 's2', 's3', 's4'] },
-  { id: 'ses3', name: 'World History', teacherId: 't3', startTime: '14:00', endTime: '15:00', studentIds: ['s3', 's4', 's5'] },
+  { 
+    id: 'ses1', 
+    name: 'Algebra 101', 
+    teacherId: 't1', 
+    startTime: '09:00', 
+    endTime: '10:30', 
+    startDate: '2024-01-01',
+    endDate: '2024-12-31',
+    studentIds: ['s1', 's2', 's5'] 
+  },
+  { 
+    id: 'ses2', 
+    name: 'Physics Lab', 
+    teacherId: 't2', 
+    startTime: '11:00', 
+    endTime: '12:30',
+    startDate: '2024-01-01',
+    endDate: '2024-06-30', 
+    studentIds: ['s1', 's2', 's3', 's4'] 
+  },
+  { 
+    id: 'ses3', 
+    name: 'World History', 
+    teacherId: 't3', 
+    startTime: '14:00', 
+    endTime: '15:00',
+    startDate: '2024-01-01',
+    endDate: '2024-12-31', 
+    studentIds: ['s3', 's4', 's5'] 
+  },
 ];
 
 // Generate some attendance history for the current month
@@ -80,8 +134,12 @@ const generateMockAttendance = (): AttendanceRecord[] => {
   days.forEach(day => {
     // Skip weekends for realism (0 = Sunday, 6 = Saturday)
     if (day.getDay() === 0 || day.getDay() === 6) return;
+    const dateStr = format(day, 'yyyy-MM-dd');
 
     initialSessions.forEach(session => {
+      // Check if session is active on this date
+      if (dateStr < session.startDate || dateStr > session.endDate) return;
+
       // 90% chance class happened
       if (Math.random() > 0.1) {
         // Randomly select present students
@@ -94,7 +152,7 @@ const generateMockAttendance = (): AttendanceRecord[] => {
 
         records.push({
           id: Math.random().toString(36).substr(2, 9),
-          date: format(day, 'yyyy-MM-dd'),
+          date: dateStr,
           sessionId: session.id,
           presentStudentIds: present,
           teacherId: session.teacherId,
@@ -115,21 +173,71 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     setAttendance(generateMockAttendance());
   }, []);
 
+  // Auth Methods
+  const login = (email: string, role: 'admin' | 'teacher'): boolean => {
+    if (role === 'admin') {
+      if (email === 'admin@school.edu') {
+        setCurrentUser({ id: 'admin', name: 'Admin User', role: 'admin', email });
+        return true;
+      }
+    } else {
+      const teacher = teachers.find(t => t.email === email);
+      if (teacher) {
+        setCurrentUser({ id: teacher.id, name: teacher.name, role: 'teacher', email });
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+  };
+
+  // Teachers CRUD
   const addTeacher = (teacher: Omit<Teacher, 'id'>) => {
     setTeachers([...teachers, { ...teacher, id: Math.random().toString(36).substr(2, 9) }]);
   };
+  const updateTeacher = (id: string, updates: Partial<Teacher>) => {
+    setTeachers(teachers.map(t => t.id === id ? { ...t, ...updates } : t));
+  };
+  const deleteTeacher = (id: string) => {
+    setTeachers(teachers.filter(t => t.id !== id));
+    // Also remove sessions assigned to this teacher? Or set them to unassigned?
+    // For simplicity, we'll keep them but they'll have invalid teacherId
+  };
 
+  // Students CRUD
   const addStudent = (student: Omit<Student, 'id'>) => {
     setStudents([...students, { ...student, id: Math.random().toString(36).substr(2, 9) }]);
   };
+  const updateStudent = (id: string, updates: Partial<Student>) => {
+    setStudents(students.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+  const deleteStudent = (id: string) => {
+    setStudents(students.filter(s => s.id !== id));
+    // Remove student from sessions
+    setSessions(sessions.map(s => ({
+      ...s,
+      studentIds: s.studentIds.filter(sid => sid !== id)
+    })));
+  };
 
+  // Sessions CRUD
   const addSession = (session: Omit<Session, 'id'>) => {
     setSessions([...sessions, { ...session, id: Math.random().toString(36).substr(2, 9) }]);
+  };
+  const updateSession = (id: string, updates: Partial<Session>) => {
+    setSessions(sessions.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+  const deleteSession = (id: string) => {
+    setSessions(sessions.filter(s => s.id !== id));
   };
 
   const markAttendance = (record: Omit<AttendanceRecord, 'id'>) => {
@@ -178,8 +286,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <DataContext.Provider value={{ 
-      teachers, students, sessions, attendance, 
-      addTeacher, addStudent, addSession, markAttendance,
+      teachers, students, sessions, attendance, currentUser,
+      login, logout,
+      addTeacher, updateTeacher, deleteTeacher,
+      addStudent, updateStudent, deleteStudent,
+      addSession, updateSession, deleteSession,
+      markAttendance,
       getTeacherWorkHours, getStudentAttendanceRate, getSessionAttendance
     }}>
       {children}
