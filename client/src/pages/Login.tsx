@@ -15,11 +15,14 @@ export default function Login() {
   const { toast } = useToast();
   
   const [adminEmail, setAdminEmail] = useState("admin@school.edu");
+  const [adminPassword, setAdminPassword] = useState("admin123");
+  
   const [teacherEmail, setTeacherEmail] = useState("sarah@school.edu");
+  const [teacherPassword, setTeacherPassword] = useState("password123");
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(adminEmail, 'admin')) {
+    if (login(adminEmail, adminPassword, 'admin')) {
       toast({ title: "Welcome back, Admin" });
       setLocation("/");
     } else {
@@ -29,11 +32,11 @@ export default function Login() {
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(teacherEmail, 'teacher')) {
+    if (login(teacherEmail, teacherPassword, 'teacher')) {
       toast({ title: "Welcome back" });
       setLocation("/portal");
     } else {
-      toast({ title: "Login Failed", description: "Email not found in teacher records", variant: "destructive" });
+      toast({ title: "Login Failed", description: "Invalid email or password", variant: "destructive" });
     }
   };
 
@@ -78,6 +81,20 @@ export default function Login() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-password">Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="admin-password" 
+                        type="password" 
+                        className="pl-9"
+                        value={adminPassword} 
+                        onChange={(e) => setAdminPassword(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full">Login as Admin</Button>
@@ -107,7 +124,21 @@ export default function Login() {
                         required 
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">Try: sarah@school.edu</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher-password">Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="teacher-password" 
+                        type="password" 
+                        className="pl-9"
+                        value={teacherPassword} 
+                        onChange={(e) => setTeacherPassword(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Default password: password123</p>
                   </div>
                 </CardContent>
                 <CardFooter>

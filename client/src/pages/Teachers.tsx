@@ -17,7 +17,7 @@ export default function Teachers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form State
-  const [formData, setFormData] = useState({ name: "", email: "", department: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", department: "", password: "" });
 
   const filteredTeachers = teachers.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -27,10 +27,10 @@ export default function Teachers() {
   const handleOpenDialog = (teacher?: Teacher) => {
     if (teacher) {
       setEditingId(teacher.id);
-      setFormData({ name: teacher.name, email: teacher.email, department: teacher.department });
+      setFormData({ name: teacher.name, email: teacher.email, department: teacher.department, password: teacher.password || "" });
     } else {
       setEditingId(null);
-      setFormData({ name: "", email: "", department: "" });
+      setFormData({ name: "", email: "", department: "", password: "" });
     }
     setIsDialogOpen(true);
   };
@@ -99,6 +99,15 @@ export default function Teachers() {
                 placeholder="e.g. Mathematics" 
                 value={formData.department}
                 onChange={(e) => setFormData({...formData, department: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input 
+                placeholder="Set login password" 
+                type="text"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
             </div>
           </div>

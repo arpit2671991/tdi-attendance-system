@@ -8,6 +8,7 @@ export interface Teacher {
   name: string;
   email: string;
   department: string;
+  password?: string;
 }
 
 export interface Student {
@@ -51,7 +52,7 @@ interface DataContextType {
   currentUser: User | null;
   
   // Auth
-  login: (email: string, role: 'admin' | 'teacher') => boolean;
+  login: (email: string, password: string, role: 'admin' | 'teacher') => boolean;
   logout: () => void;
 
   // CRUD
@@ -78,9 +79,9 @@ interface DataContextType {
 // --- Mock Data ---
 
 const initialTeachers: Teacher[] = [
-  { id: 't1', name: 'Sarah Wilson', email: 'sarah@school.edu', department: 'Mathematics' },
-  { id: 't2', name: 'James Chen', email: 'james@school.edu', department: 'Science' },
-  { id: 't3', name: 'Emily Rodriguez', email: 'emily@school.edu', department: 'History' },
+  { id: 't1', name: 'Sarah Wilson', email: 'sarah@school.edu', department: 'Mathematics', password: 'password123' },
+  { id: 't2', name: 'James Chen', email: 'james@school.edu', department: 'Science', password: 'password123' },
+  { id: 't3', name: 'Emily Rodriguez', email: 'emily@school.edu', department: 'History', password: 'password123' },
 ];
 
 const initialStudents: Student[] = [
@@ -180,14 +181,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Auth Methods
-  const login = (email: string, role: 'admin' | 'teacher'): boolean => {
+  const login = (email: string, password: string, role: 'admin' | 'teacher'): boolean => {
     if (role === 'admin') {
-      if (email === 'admin@school.edu') {
+      if (email === 'admin@school.edu' && password === 'admin123') {
         setCurrentUser({ id: 'admin', name: 'Admin User', role: 'admin', email });
         return true;
       }
     } else {
-      const teacher = teachers.find(t => t.email === email);
+      const teacher = teachers.find(t => t.email === email && t.password === password);
       if (teacher) {
         setCurrentUser({ id: teacher.id, name: teacher.name, role: 'teacher', email });
         return true;
