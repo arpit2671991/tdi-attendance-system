@@ -7,17 +7,22 @@ export interface Teacher {
   id: string;
   name: string;
   email: string;
-  department: string;
+  mobile: string;
   password?: string;
 }
 
 export interface Admin {
-  id: string;
+  id: string; 
   name: string;
   email: string;
+  mobile: string;
   password?: string;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+}
 export interface Student {
   id: string;
   name: string;
@@ -28,6 +33,7 @@ export interface Session {
   id: string;
   name: string;
   teacherId: string;
+  departmentId: string;
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
   startDate: string; // YYYY-MM-DD
@@ -49,18 +55,20 @@ export interface User {
   name: string;
   role: 'admin' | 'teacher';
   email: string;
+  mobile: string;
 }
 
 interface DataContextType {
   teachers: Teacher[];
   admins: Admin[];
   students: Student[];
+  departments: Department[];
   sessions: Session[];
   attendance: AttendanceRecord[];
   currentUser: User | null;
   
   // Auth
-  login: (email: string, password: string, role: 'admin' | 'teacher') => boolean;
+  login: (mobile: string, password: string, role: 'admin' | 'teacher') => boolean;
   logout: () => void;
 
   // CRUD
@@ -70,6 +78,10 @@ interface DataContextType {
 
   addAdmin: (admin: Omit<Admin, 'id'>) => void;
   deleteAdmin: (id: string) => void;
+
+  addDepartment: (department: Omit<Department, 'id'>) => void;
+  updateDepartment: (id: string, department: Partial<Department>) => void;
+  deleteDepartment: (id: string) => void;
 
   addStudent: (student: Omit<Student, 'id'>) => void;
   updateStudent: (id: string, student: Partial<Student>) => void;
@@ -91,13 +103,13 @@ interface DataContextType {
 // --- Mock Data ---
 
 const initialAdmins: Admin[] = [
-    { id: 'admin1', name: 'System Admin', email: 'admin@school.edu', password: 'admin123' }
+    { id: 'admin1', name: 'System Admin', email: 'admin@school.edu', mobile: '12345678', password: 'admin123' }
 ];
 
 const initialTeachers: Teacher[] = [
-  { id: 't1', name: 'Sarah Wilson', email: 'sarah@school.edu', department: 'Mathematics', password: 'password123' },
-  { id: 't2', name: 'James Chen', email: 'james@school.edu', department: 'Science', password: 'password123' },
-  { id: 't3', name: 'Emily Rodriguez', email: 'emily@school.edu', department: 'History', password: 'password123' },
+  { id: 't1', name: 'Sarah Wilson', email: 'sarah@school.edu', mobile: '11111111',  password: 'password123' },
+  { id: 't2', name: 'James Chen', email: 'james@school.edu', mobile: '22222222',  password: 'password123' },
+  { id: 't3', name: 'Emily Rodriguez', email: 'emily@school.edu', mobile: '33333333', password: 'password123' },
 ];
 
 const initialStudents: Student[] = [
@@ -108,6 +120,11 @@ const initialStudents: Student[] = [
   { id: 's5', name: 'Evan Wright', grade: '10th' },
 ];
 
+const initialDepartments: Department[] = [
+    {id: 'd1', name: 'Math'},
+    {id: 'd2', name: 'English'},
+    {id: 'd3', name: 'History'},
+],
 const initialSessions: Session[] = [
   { 
     id: 'ses1', 
@@ -117,6 +134,7 @@ const initialSessions: Session[] = [
     endTime: '10:30', 
     startDate: '2024-01-01',
     endDate: '2024-12-31',
+    departmentId: 'd1',
     studentIds: ['s1', 's2', 's5'] 
   },
   { 
@@ -127,6 +145,7 @@ const initialSessions: Session[] = [
     endTime: '12:30',
     startDate: '2024-01-01',
     endDate: '2024-06-30', 
+    departmentId: 'd2',
     studentIds: ['s1', 's2', 's3', 's4'] 
   },
   { 
@@ -137,6 +156,7 @@ const initialSessions: Session[] = [
     endTime: '15:00',
     startDate: '2024-01-01',
     endDate: '2024-12-31', 
+    departmentId: 'd2',
     studentIds: ['s3', 's4', 's5'] 
   },
 ];
@@ -198,17 +218,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Auth Methods
-  const login = (email: string, password: string, role: 'admin' | 'teacher'): boolean => {
+  const login = (mobile: string, password: string, role: 'admin' | 'teacher'): boolean => {
     if (role === 'admin') {
-      const admin = admins.find(a => a.email === email && a.password === password);
-      if (admin) {
-        setCurrentUser({ id: admin.id, name: admin.name, role: 'admin', email });
+      const admin = admins.find(a => a.mobile === mobile && a.password === password);
+      if (admin) { 
+        setCurrentUser({ id: admin.id, name: admin.name, role: 'admin', email: admin.email, mobile: admin.mobile });
         return true;
       }
     } else {
-      const teacher = teachers.find(t => t.email === email && t.password === password);
+      const teacher = teachers.find(t => t.mobile === mobile && t.password === password);
       if (teacher) {
-        setCurrentUser({ id: teacher.id, name: teacher.name, role: 'teacher', email });
+        setCurrentUser({ id: teacher.id, name: teacher.name, role: 'teacher', email: teacher.email, mobile: teacher.mobile });
         return true;
       }
     }

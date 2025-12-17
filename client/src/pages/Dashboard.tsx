@@ -1,18 +1,21 @@
-import { useTeachers, useStudents, useSessions, useAttendance } from "@/lib/hooks";
+import { useTeachers, useStudents, useSessions, useAttendance, useDepartments } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, GraduationCap, Calendar, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: students = [], isLoading: loadingStudents } = useStudents();
+  const { data: departments = [], isLoading: loadingDepartments } = useDepartments();
   const { data: sessions = [], isLoading: loadingSessions } = useSessions();
   const { data: attendance = [], isLoading: loadingAttendance } = useAttendance();
 
-  const isLoading = loadingTeachers || loadingStudents || loadingSessions || loadingAttendance;
+  const isLoading = loadingTeachers || loadingStudents || loadingDepartments || loadingSessions || loadingAttendance;
 
   const totalTeachers = teachers.length;
   const totalStudents = students.length;
+  const totalDepartments = departments.length;
   const activeSessions = sessions.length;
   
   let totalPresent = 0;
@@ -30,7 +33,7 @@ export default function Dashboard() {
 
   const stats = [
     {
-      title: "Total Teachers",
+      title: "Total Instructors",
       value: totalTeachers,
       icon: Users,
       description: "Active faculty members",
@@ -43,6 +46,15 @@ export default function Dashboard() {
       value: totalStudents,
       icon: GraduationCap,
       description: "Enrolled students",
+      trend: "+5 this month",
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10"
+    },
+    {
+      title: "Total Departments",
+      value: totalDepartments,
+      icon: GraduationCap,
+      description: "Department count",
       trend: "+5 this month",
       color: "text-emerald-500",
       bg: "bg-emerald-500/10"
@@ -75,7 +87,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Overview of school performance and activity.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i} className="border-none shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -99,7 +111,7 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Overview of school performance and activity.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.title} className="border-none shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -161,15 +173,19 @@ export default function Dashboard() {
           <CardContent className="grid gap-2">
              <div className="bg-white/10 p-3 rounded-md hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-3">
                 <Calendar className="h-5 w-5" />
-                <span className="font-medium">Schedule New Session</span>
+                <Link to="/sessions" className="font-medium">Schedule New Session</Link>
              </div>
              <div className="bg-white/10 p-3 rounded-md hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-3">
                 <Users className="h-5 w-5" />
-                <span className="font-medium">Register New Teacher</span>
+                <Link to="/teachers" className="font-medium">Register New Teacher</Link>
+             </div>
+              <div className="bg-white/10 p-3 rounded-md hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-3">
+                <GraduationCap className="h-5 w-5" />
+                <Link to="/departments" className="font-medium">Create New Department</Link>
              </div>
              <div className="bg-white/10 p-3 rounded-md hover:bg-white/20 transition-colors cursor-pointer flex items-center gap-3">
                 <GraduationCap className="h-5 w-5" />
-                <span className="font-medium">Enroll Student</span>
+                <Link to="/students" className="font-medium">Enroll Student</Link>
              </div>
           </CardContent>
         </Card>

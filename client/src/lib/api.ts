@@ -1,17 +1,24 @@
 import type { 
   Admin, 
-  Teacher, 
+  Teacher,
+  Department, 
   Student, 
   Session, 
   AttendanceRecord,
   InsertAdmin,
   InsertTeacher,
+  InsertDepartment,
   InsertStudent,
   InsertSession,
   InsertAttendance
 } from "@shared/schema";
 
-const API_BASE = "/api";
+
+
+
+
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${url}`, {
@@ -33,10 +40,10 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
 
 // Auth API
 export const authApi = {
-  login: (email: string, password: string, role: "admin" | "teacher") =>
+  login: (mobile: string, password: string, role: "admin" | "teacher" ) =>
     fetchApi<{ user: any }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ mobile, password, role }),
     }),
 
   logout: () =>
@@ -76,6 +83,23 @@ export const teacherApi = {
     fetchApi<{ success: boolean }>(`/teachers/${id}`, { method: "DELETE" }),
 };
 
+// Department API
+// Student API
+export const departmentApi = {
+  getAll: () => fetchApi<Department[]>("/departments"),
+  create: (data: InsertDepartment) =>
+    fetchApi<Department>("/departments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<InsertDepartment>) =>
+    fetchApi<Department>(`/departments/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<{ success: boolean }>(`/departments/${id}`, { method: "DELETE" }),
+};
 // Student API
 export const studentApi = {
   getAll: () => fetchApi<Student[]>("/students"),
@@ -118,6 +142,7 @@ export const attendanceApi = {
     teacherId?: string;
     sessionId?: string;
     studentId?: string;
+    
   }) => {
     const params = new URLSearchParams();
     if (filters?.startDate) params.set("startDate", filters.startDate);
@@ -135,7 +160,11 @@ export const attendanceApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  
+   update: (id: string, data: Partial<InsertSession>) =>
+    fetchApi<Session>(`/attendance/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
   delete: (id: string) =>
     fetchApi<{ success: boolean }>(`/attendance/${id}`, { method: "DELETE" }),
 };

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Mail, Trash2 } from "lucide-react";
+import { Plus, Search, Mail, Trash2, Smartphone } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ export default function Admins() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", mobile: "", password: "" });
 
   const filteredAdmins = admins.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -29,15 +29,15 @@ export default function Admins() {
   );
 
   const handleOpenDialog = () => {
-    setFormData({ name: "", email: "", password: "" });
+    setFormData({ name: "", email: "", mobile: "", password: "" });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.password) return;
+    if (!formData.name || !formData.email || !formData.mobile || !formData.password) return;
     
-    if (admins.some(a => a.email === formData.email)) {
-        toast({ title: "Error", description: "Email already exists", variant: "destructive" });
+    if (admins.some(a => a.mobile === formData.mobile)) {
+        toast({ title: "Error", description: "Mobile number already exists", variant: "destructive" });
         return;
     }
 
@@ -118,6 +118,16 @@ export default function Admins() {
                 data-testid="input-admin-email"
               />
             </div>
+              <div className="space-y-2">
+              <label className="text-sm font-medium">Mobile No.</label>
+              <Input 
+                placeholder="" 
+                type="text"
+                value={formData.mobile}
+                onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                data-testid="input-admin-mobile"
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Password</label>
               <Input 
@@ -162,6 +172,7 @@ export default function Admins() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Mobile</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -181,6 +192,12 @@ export default function Admins() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="h-3 w-3" />
                       {admin.email}
+                    </div>
+                  </TableCell>
+                   <TableCell>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Smartphone className="h-3 w-3" />
+                      {admin.mobile}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">

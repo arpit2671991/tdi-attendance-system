@@ -11,12 +11,14 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Teachers from "@/pages/Teachers";
 import Students from "@/pages/Students";
+import Departments from "@/pages/Departments";
 import Sessions from "@/pages/Sessions";
 import Reports from "@/pages/Reports";
 import TeacherPortal from "@/pages/TeacherPortal";
 import NotFound from "@/pages/not-found";
 
 import Admins from "@/pages/Admins";
+import Attendances from "./pages/Attendaces";
 
 // Protected Route Wrapper
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
@@ -75,8 +77,14 @@ function Router() {
       <Route path="/students">
         <ProtectedRoute component={Students} allowedRoles={['admin']} />
       </Route>
+      <Route path="/departments">
+        <ProtectedRoute component={Departments} allowedRoles={['admin']} />
+      </Route>
       <Route path="/sessions">
         <ProtectedRoute component={Sessions} allowedRoles={['admin']} />
+      </Route>
+        <Route path="/attendaces">
+        <ProtectedRoute component={Attendances} allowedRoles={['admin']} />
       </Route>
       
       {/* Shared/Teacher Routes */}

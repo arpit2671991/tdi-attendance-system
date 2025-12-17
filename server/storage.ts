@@ -6,38 +6,53 @@ import { eq, and, gte, lte, like, or, sql } from "drizzle-orm";
 import type {
   Admin,
   Teacher,
+  Department,
   Student,
   Session,
   AttendanceRecord,
   InsertAdmin,
   InsertTeacher,
+  InsertDepartment,
   InsertStudent,
   InsertSession,
   InsertAttendance,
 } from "@shared/schema";
 
+import dotenv from "dotenv";
+dotenv.config();
+
+console.log("database url", process.env.Database_URL)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
 
 export const db = drizzle(pool, { schema });
 
 export interface IStorage {
   // Admin CRUD
   getAdmin(id: string): Promise<Admin | undefined>;
-  getAdminByEmail(email: string): Promise<Admin | undefined>;
+  getAdminByMobile(mobile: string): Promise<Admin | undefined>;
   getAllAdmins(): Promise<Admin[]>;
   createAdmin(admin: InsertAdmin): Promise<Admin>;
   deleteAdmin(id: string): Promise<void>;
 
   // Teacher CRUD
   getTeacher(id: string): Promise<Teacher | undefined>;
-  getTeacherByEmail(email: string): Promise<Teacher | undefined>;
+  getTeacherByMobile(mobile: string): Promise<Teacher | undefined>;
   getAllTeachers(): Promise<Teacher[]>;
   createTeacher(teacher: InsertTeacher): Promise<Teacher>;
   updateTeacher(id: string, teacher: Partial<InsertTeacher>): Promise<Teacher | undefined>;
   deleteTeacher(id: string): Promise<void>;
 
+  // Department CRUD
+  getDepartment(id: string): Promise<Department | undefined>;
+  getAllDepartments(): Promise<Department[]>;
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department | undefined>;
+  deleteDepartment(id: string): Promise<void>;
+
+  
   // Student CRUD
   getStudent(id: string): Promise<Student | undefined>;
   getAllStudents(): Promise<Student[]>;
@@ -65,6 +80,7 @@ export interface IStorage {
     studentId?: string;
   }): Promise<AttendanceRecord[]>;
   createAttendance(attendance: InsertAttendance): Promise<AttendanceRecord>;
+  updateAttendance(id: string, attendance: Partial<InsertAttendance>): Promise<AttendanceRecord | undefined>;
   deleteAttendance(id: string): Promise<void>;
 }
 
@@ -75,8 +91,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAdminByEmail(email: string): Promise<Admin | undefined> {
-    const result = await db.select().from(schema.admins).where(eq(schema.admins.email, email));
+  async getAdminByMobile(mobile: string): Promise<Admin | undefined> {
+    const result = await db.select().from(schema.admins).where(eq(schema.admins.mobile, mobile));
     return result[0];
   }
 
@@ -99,8 +115,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getTeacherByEmail(email: string): Promise<Teacher | undefined> {
-    const result = await db.select().from(schema.teachers).where(eq(schema.teachers.email, email));
+  async getTeacherByMobile(mobile: string): Promise<Teacher | undefined> {
+    const result = await db.select().from(schema.teachers).where(eq(schema.teachers.mobile, mobile));
     return result[0];
   }
 
@@ -121,6 +137,31 @@ export class DatabaseStorage implements IStorage {
   async deleteTeacher(id: string): Promise<void> {
     await db.delete(schema.teachers).where(eq(schema.teachers.id, id));
   }
+
+  // Department methods
+  async getDepartment(id: string): Promise<Department | undefined> {
+    const result = await db.select().from(schema.departments).where(eq(schema.departments.id, id));
+    return result[0];
+  }
+
+  async getAllDepartments(): Promise<Department[]> {
+    return await db.select().from(schema.departments);
+  }
+
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const result = await db.insert(schema.departments).values(department).returning();
+    return result[0];
+  }
+
+  async updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const result = await db.update(schema.departments).set(department).where(eq(schema.departments.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteDepartment(id: string): Promise<void> {
+    await db.delete(schema.departments).where(eq(schema.departments.id, id));
+  }
+
 
   // Student methods
   async getStudent(id: string): Promise<Student | undefined> {
@@ -160,6 +201,9 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(schema.sessions).where(eq(schema.sessions.teacherId, teacherId));
   }
 
+  async getSessionsByDepartment(departmentId: string): Promise<Session[]> {
+    return await db.select().from(schema.sessions).where(eq(schema.sessions.departmentId, departmentId));
+  }
   async createSession(session: InsertSession): Promise<Session> {
     const result = await db.insert(schema.sessions).values(session).returning();
     return result[0];
@@ -191,6 +235,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(schema.attendance.date, date), eq(schema.attendance.sessionId, sessionId)));
     return result[0];
   }
+
+  
 
   async getAttendanceByFilters(filters: {
     startDate?: string;
@@ -232,6 +278,15 @@ export class DatabaseStorage implements IStorage {
   async deleteAttendance(id: string): Promise<void> {
     await db.delete(schema.attendance).where(eq(schema.attendance.id, id));
   }
+  async updateAttendance(id: string, attendance: Partial<InsertAttendance>): Promise<AttendanceRecord | undefined> {
+  const result = await db.update(schema.attendance).set(attendance).where(eq(schema.attendance.id, id)).returning();
+  return result[0];
 }
+}
+
+
+
+
+
 
 export const storage = new DatabaseStorage();

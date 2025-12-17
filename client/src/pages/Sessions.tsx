@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSessions, useCreateSession, useUpdateSession, useDeleteSession, useTeachers, useStudents } from "@/lib/hooks";
+import { useSessions, useCreateSession, useUpdateSession, useDeleteSession, useTeachers, useStudents, useDepartments } from "@/lib/hooks";
 import type { Session } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ export default function Sessions() {
   const { data: sessions = [], isLoading: loadingSessions } = useSessions();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: students = [], isLoading: loadingStudents } = useStudents();
+  const { data: departments = [], isLoading: loadingDepartments } = useDepartments();
+
+
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
   const deleteSession = useDeleteSession();
@@ -26,6 +29,7 @@ export default function Sessions() {
   const [formData, setFormData] = useState({
     name: "",
     teacherId: "",
+    departmentId: "",
     startTime: "09:00",
     endTime: "10:00",
     startDate: "2024-01-01",
@@ -33,7 +37,7 @@ export default function Sessions() {
     studentIds: [] as string[]
   });
 
-  const isLoading = loadingSessions || loadingTeachers || loadingStudents;
+  const isLoading = loadingSessions || loadingTeachers || loadingDepartments || loadingStudents;
 
   const handleOpenDialog = (session?: Session) => {
     if (session) {
@@ -41,6 +45,7 @@ export default function Sessions() {
       setFormData({
         name: session.name,
         teacherId: session.teacherId,
+        departmentId: session.departmentId, 
         startTime: session.startTime,
         endTime: session.endTime,
         startDate: session.startDate,
@@ -52,10 +57,11 @@ export default function Sessions() {
       setFormData({
         name: "",
         teacherId: "",
+        departmentId: "",
         startTime: "09:00",
         endTime: "10:00",
-        startDate: "2024-01-01",
-        endDate: "2024-12-31",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
         studentIds: [] 
       });
     }
@@ -63,7 +69,7 @@ export default function Sessions() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.teacherId) return;
+    if (!formData.name || !formData.teacherId || !formData.departmentId) return;
     
     if (editingId) {
       await updateSession.mutateAsync({ id: editingId, data: formData });
@@ -124,7 +130,7 @@ export default function Sessions() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Session' : 'Create New Session'}</DialogTitle>
             <DialogDescription>
@@ -154,7 +160,23 @@ export default function Sessions() {
                    </SelectTrigger>
                    <SelectContent>
                      {teachers.map(t => (
-                       <SelectItem key={t.id} value={t.id}>{t.name} ({t.department})</SelectItem>
+                       <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+              </div>
+              <div className="space-y-2 col-span-2">
+                 <label className="text-sm font-medium">Department</label>
+                 <Select 
+                   value={formData.departmentId} 
+                   onValueChange={(val) => setFormData({...formData, departmentId: val})}
+                 >
+                   <SelectTrigger data-testid="select-session-department">
+                     <SelectValue placeholder="Select Department" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {departments.map(d => (
+                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                      ))}
                    </SelectContent>
                  </Select>

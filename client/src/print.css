@@ -1,0 +1,51 @@
+@media print {
+  /* Remove background & shadows */
+  * {
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    color: black;
+  }
+
+  /* Hide non-essential UI */
+  button,
+  input,
+  select,
+  .no-print,
+  nav,
+  aside,
+  header {
+    display: none !important;
+  }
+
+  /* Cards look like sections */
+  .card {
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+    margin-bottom: 16px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  /* Force page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+}

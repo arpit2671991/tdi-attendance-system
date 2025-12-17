@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   adminApi, 
-  teacherApi, 
+  teacherApi,
+  departmentApi, 
   studentApi, 
   sessionApi, 
   attendanceApi, 
@@ -14,6 +15,8 @@ export const queryKeys = {
   admins: ["admins"] as const,
   teachers: ["teachers"] as const,
   teacher: (id: string) => ["teacher", id] as const,
+  departments: ["departments"] as const,
+  department: (id: string) => ["department", id] as const,
   students: ["students"] as const,
   sessions: ["sessions"] as const,
   attendance: (filters?: any) => ["attendance", filters] as const,
@@ -121,6 +124,62 @@ export function useDeleteTeacher() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to delete teacher", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+// Department hooks
+export function useDepartments() {
+  return useQuery({
+    queryKey: queryKeys.departments,
+    queryFn: departmentApi.getAll,
+  });
+}
+
+export function useCreateDepartment() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: departmentApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.departments });
+      toast({ title: "Department created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create department", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useUpdateDepartment() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => departmentApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.departments });
+      toast({ title: "Department updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update department", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteDepartment() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: departmentApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.departments });
+      toast({ title: "Department deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to delete department", description: error.message, variant: "destructive" });
     },
   });
 }
@@ -259,6 +318,22 @@ export function useCreateAttendance() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to mark attendance", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useUpdateAttendance() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => attendanceApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students });
+      toast({ title: "Student updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update student", description: error.message, variant: "destructive" });
     },
   });
 }

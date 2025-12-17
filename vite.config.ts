@@ -4,6 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
   plugins: [
@@ -41,6 +44,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    port: Number(process.env.FRONTEND_PORT) || 3000,
+    strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {

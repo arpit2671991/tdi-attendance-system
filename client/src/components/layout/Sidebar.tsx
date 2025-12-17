@@ -14,12 +14,15 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Admins', href: '/admins', icon: ShieldCheck },
   { name: 'Teachers', href: '/teachers', icon: Users },
+  { name: 'Departments', href: '/departments', icon: GraduationCap },
   { name: 'Students', href: '/students', icon: GraduationCap },
   { name: 'Sessions', href: '/sessions', icon: CalendarDays },
+  { name: 'Attendance', href: '/attendaces', icon: CalendarDays },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
 ];
 
@@ -42,10 +45,10 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+    <div className="no-print flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
-        <School className="h-6 w-6 text-sidebar-primary" />
-        <span className="text-lg font-heading font-bold tracking-tight">EduTrack</span>
+         <img src="../../public/tdi-logo.jpeg" alt="TDI Logo" className="h-6 w-6 text-sidebar-primary" />
+        <span className="text-lg font-heading font-bold tracking-tight">Smart Attendance</span>
       </div>
       
       <div className="flex-1 overflow-y-auto py-4">
@@ -92,6 +95,7 @@ export function Sidebar() {
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
+        <p className="text-xs text-sidebar-foreground/50 mt-2">Developed by: IT Admin@TDI</p>
       </div>
     </div>
   );

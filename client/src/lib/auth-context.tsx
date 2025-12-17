@@ -5,13 +5,14 @@ interface User {
   id: string;
   name: string;
   email: string;
+  mobile: string;
   role: 'admin' | 'teacher';
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, role: 'admin' | 'teacher') => Promise<void>;
+  login: (mobile: string, password: string, role: 'admin' | 'teacher') => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string, role: 'admin' | 'teacher') => {
-    const { user } = await authApi.login(email, password, role);
+  const login = async (mobile: string, password: string, role: 'admin' | 'teacher') => {
+    const { user } = await authApi.login(mobile, password, role);
     setUser(user);
   };
 

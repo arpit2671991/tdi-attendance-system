@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Mail, BookOpen, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Mail, BookOpen, Pencil, Trash2, Smartphone } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -20,32 +20,32 @@ export default function Teachers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({ name: "", email: "", department: "", password: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", mobile: "", password: "" });
 
   const filteredTeachers = teachers.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.department.toLowerCase().includes(searchTerm.toLowerCase())
+    t.mobile.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenDialog = (teacher?: Omit<Teacher, "password"> | Teacher) => {
     if (teacher) {
       setEditingId(teacher.id);
-      setFormData({ name: teacher.name, email: teacher.email, department: teacher.department, password: "" });
+      setFormData({ name: teacher.name, email: teacher.email, mobile: teacher.mobile, password: "" });
     } else {
       setEditingId(null);
-      setFormData({ name: "", email: "", department: "", password: "" });
-    }
+      setFormData({ name: "", email: "", mobile: "", password: "" });
+    } 
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email) return;
+    if (!formData.name || !formData.mobile) return;
     
     if (editingId) {
       const updateData: any = { 
         name: formData.name, 
         email: formData.email, 
-        department: formData.department 
+        mobile: formData.mobile 
       };
       if (formData.password) {
         updateData.password = formData.password;
@@ -67,8 +67,8 @@ export default function Teachers() {
       <div className="space-y-8 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-heading font-bold tracking-tight">Teachers</h1>
-            <p className="text-muted-foreground">Manage faculty members and departments.</p>
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Instructor</h1>
+            <p className="text-muted-foreground">Manage faculty members.</p>
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
@@ -90,12 +90,12 @@ export default function Teachers() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Teachers</h1>
-          <p className="text-muted-foreground">Manage faculty members and departments.</p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Instructors</h1>
+          <p className="text-muted-foreground">Manage faculty members.</p>
         </div>
         
         <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-teacher">
-          <Plus className="h-4 w-4" /> Add Teacher
+          <Plus className="h-4 w-4" /> Add Instructor
         </Button>
       </div>
 
@@ -128,12 +128,12 @@ export default function Teachers() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Department</label>
+              <label className="text-sm font-medium">Mobile No.</label>
               <Input 
-                placeholder="e.g. Mathematics" 
-                value={formData.department}
-                onChange={(e) => setFormData({...formData, department: e.target.value})}
-                data-testid="input-teacher-department"
+                placeholder="e.g. 91234567" 
+                value={formData.mobile}
+                onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                data-testid="input-teacher-mobile"
               />
             </div>
             <div className="space-y-2">
@@ -179,7 +179,7 @@ export default function Teachers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
+                <TableHead>Mobile</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -195,8 +195,8 @@ export default function Teachers() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <BookOpen className="h-3 w-3" />
-                      {teacher.department}
+                      <Smartphone className="h-3 w-3" />
+                      {teacher.mobile}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -230,7 +230,7 @@ export default function Teachers() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the teacher record.
+                              This action cannot be undone. This will permanently delete the instructor record.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -252,7 +252,7 @@ export default function Teachers() {
               {filteredTeachers.length === 0 && (
                  <TableRow>
                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                     No teachers found.
+                     No instructors found.
                    </TableCell>
                  </TableRow>
               )}

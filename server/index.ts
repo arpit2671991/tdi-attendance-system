@@ -3,6 +3,10 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import cors from "cors";
+
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -13,6 +17,12 @@ declare module "http" {
   }
 }
 
+
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000", // frontend URL
+  credentials: true,               // allow cookies/session
+}));
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -103,10 +113,11 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      // reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
     },
   );
 })();
+

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { 
   insertAdminSchema, 
   insertTeacherSchema, 
+  insertDepartmentSchema,
   insertStudentSchema, 
   insertSessionSchema,
   insertAttendanceSchema 
@@ -25,17 +26,17 @@ export async function registerRoutes(
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password, role } = req.body;
+      const { mobile, password, role } = req.body;
 
-      if (!email || !password || !role) {
-        return res.status(400).json({ error: "Email, password, and role are required" });
+      if (!mobile || !password || !role) {
+        return res.status(400).json({ error: "Mobile, password, and role are required" });
       }
 
       let user;
       if (role === "admin") {
-        user = await storage.getAdminByEmail(email);
+        user = await storage.getAdminByMobile(mobile);
       } else if (role === "teacher") {
-        user = await storage.getTeacherByEmail(email);
+        user = await storage.getTeacherByMobile(mobile);
       } else {
         return res.status(400).json({ error: "Invalid role" });
       }
@@ -221,6 +222,51 @@ export async function registerRoutes(
     }
   });
 
+  // Department routes
+  app.get("/api/departments", requireAuth, async(req, res) => {
+    try { 
+      const departments = await storage.getAllDepartments();
+      res.json(departments)
+    } catch (error) {
+      console.log("Get departments:", error);
+      res.status(500).json({error: "Internal server error"});
+    }
+  })
+
+  app.post("/api/departments", requireAdmin, async(req, res) => {
+    try {
+      const data = insertDepartmentSchema.parse(req.body);
+      const department = await storage.createDepartment(data)
+      res.status(201).json(department)
+    } catch (error) {
+      console.log("Create department error:", error)
+      res.status(500).json({error: "Internal server error"});
+    }
+  })
+
+   app.patch("/api/departments/:id", requireAdmin, async (req, res) => {
+    try {
+      const department = await storage.updateDepartment(req.params.id, req.body);
+      if (!department) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      res.json(department);
+    } catch (error) {
+      console.error("Update department error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+   app.delete("/api/departments/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteDepartment(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete department error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Student routes
   app.get("/api/students", requireAuth, async (req, res) => {
     try {
@@ -336,6 +382,29 @@ export async function registerRoutes(
     }
   });
 
+//   app.get("/api/attendance", requireAuth, async (req, res) => {
+//   try {
+//     const { startDate, endDate, teacherId, sessionId, studentId, page, limit } = req.query;
+
+//     const filters: any = {};
+//     if (startDate) filters.startDate = startDate as string;
+//     if (endDate) filters.endDate = endDate as string;
+//     if (teacherId) filters.teacherId = teacherId as string;
+//     if (sessionId) filters.sessionId = sessionId as string;
+//     if (studentId) filters.studentId = studentId as string;
+
+//     const pageNum = parseInt(page as string) || 1;
+//     const pageLimit = parseInt(limit as string) || 10;
+
+//     const attendance = await storage.getAttendanceByFilters(filters, pageNum, pageLimit);
+//     res.json(attendance);
+//   } catch (error) {
+//     console.error("Get attendance error:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+
   app.post("/api/attendance", requireAuth, async (req, res) => {
     try {
       const data = insertAttendanceSchema.parse(req.body);
@@ -361,6 +430,19 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Create attendance error:", error);
       res.status(400).json({ error: "Invalid data" });
+    }
+  });
+
+  app.patch("/api/attendance/:id", requireAuth, async (req, res) => {
+    try {
+      const attendance = await storage.updateAttendance(req.params.id, req.body);
+      if (!attendance) {
+        return res.status(404).json({ error: "Attendance not found" });
+      }
+      res.json(attendance);
+    } catch (error) {
+      console.error("Update attendance error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
