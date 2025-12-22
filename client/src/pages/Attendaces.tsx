@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { act, useState } from "react";
 import {
   useAttendance,
   useCreateAttendance,
@@ -92,6 +92,21 @@ const combineDateAndTime = (date: string, time: string) => {
   // time = HH:mm
   return new Date(`${date}T${time}:00`).toISOString();
 };
+
+const calculateDurationHours = (start: string, end: string) => {
+  if (!start || !end) return 0;
+
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+
+  const startMinutes = sh * 60 + sm;
+  const endMinutes = eh * 60 + em;
+
+  if (endMinutes <= startMinutes) return 0;
+
+  return (endMinutes - startMinutes) / 60;
+};
+
 
 export default function Attendances() {
   const [filters, setFilters] = useState({
@@ -322,12 +337,18 @@ export default function Attendances() {
                 <Input
                   type="time"
                   value={formData.actualStartTime}
-                  onChange={(e) =>
-                    setFormData({
-                     ...formData,
-                     actualStartTime: e.target.value,
-                    })
-                  }
+                  onChange={(e) =>{
+                    const start = e.target.value;
+                    setFormData((prev) => ({
+ ...prev,
+                      actualStartTime: start,
+                      durationHours: calculateDurationHours(
+                        start,
+                        prev.actualEndTime
+                      ),
+                    }));
+                  }}
+                 
                   data-testid="input-session-start-time"
                 />
               </div>
@@ -336,9 +357,17 @@ export default function Attendances() {
                 <Input
                   type="time"
                   value={formData.actualEndTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData,  actualEndTime: e.target.value })
-                  }
+                  onChange={(e) =>{
+                    const end  = e.target.value;
+                    setFormData((prev) => ({
+ ...prev,
+                      actualEndTime: end,
+                      durationHours: calculateDurationHours(
+                        prev.actualStartTime,
+                        end
+                      ),
+                    }));
+                  }}
                   data-testid="input-session-end-time"
                 />
               </div>

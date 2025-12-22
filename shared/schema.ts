@@ -46,9 +46,8 @@ export const attendance = pgTable("attendance", {
   sessionId: varchar("session_id").references(() => sessions.id, {onDelete: "set null"}),
   presentStudentIds: text("present_student_ids").array().notNull().default(sql`ARRAY[]::text[]`),
   teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
-  actualStartTime: timestamp("actual_start_time", { mode: "string", withTimezone: true, }).notNull(),
-  actualEndTime: timestamp("actual_end_time", { mode: "string", withTimezone: true, }).notNull(),
-
+  actualStartTime: timestamp("actual_start_time", { mode: "string", withTimezone: true, }),
+  actualEndTime: timestamp("actual_end_time", { mode: "string", withTimezone: true, }),
   durationHours: real("duration_hours").notNull(),
 });
 
