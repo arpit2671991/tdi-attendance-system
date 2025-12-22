@@ -337,7 +337,7 @@ export default function TeacherPortal() {
 
   {/* Quick buttons */}
   <div className="flex flex-wrap gap-2">
-    {[0.5, 1, 1.5, 2, 2.5, 3].map((h) => (
+    {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].map((h) => (
       <Button
         key={h}
         type="button"

@@ -389,7 +389,7 @@ export default function Attendances() {
 
   {/* Quick buttons */}
   <div className="flex flex-wrap gap-2">
-    {[0.5, 1, 1.5, 2, 2.5, 3].map((h) => (
+    {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].map((h) => (
       <Button
         key={h}
         type="button"
@@ -519,8 +519,8 @@ export default function Attendances() {
                 <TableHead>Date</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Session</TableHead>
-                {/* <TableHead>Start Time</TableHead>
-                <TableHead>End Time</TableHead> */}
+                <TableHead>Session Start Time</TableHead>
+                <TableHead>Session End Time</TableHead>
                 <TableHead>Duration Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -552,26 +552,18 @@ export default function Attendances() {
                     </TableCell>
                     <TableCell>{teacher?.name || "Unassigned"}</TableCell>
                     <TableCell>{session?.name || "Unassigned"}</TableCell>
-                    {/* <TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-3 w-3" />
-                        {new Date(
-                          attendance.actualStartTime
-                        ).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {session?.startTime}
                       </div>
-                    </TableCell> */}
-                    {/* <TableCell>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-3 w-3" />
-                        {new Date(attendance.actualEndTime).toLocaleTimeString(
-                          "en-US",
-                          { hour: "2-digit", minute: "2-digit" }
-                        )}
+                        {session?.endTime}
                       </div>
-                    </TableCell> */}
+                    </TableCell>
                     <TableCell>
                       {" "}
                       {formatDurationFromHours(
