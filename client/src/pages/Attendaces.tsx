@@ -78,34 +78,34 @@ const formatDate = (value: string | Date) => {
   return `${day}-${month}-${year}`;
 };
 
-const extractTime = (iso: string) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+// const extractTime = (iso: string) => {
+//   if (!iso) return "";
+//   const d = new Date(iso);
+//   return d.toLocaleTimeString("en-GB", {
+//     hour: "2-digit",
+//     minute: "2-digit",
+//   });
+// };
 
-const combineDateAndTime = (date: string, time: string) => {
-  // date = YYYY-MM-DD
-  // time = HH:mm
-  return new Date(`${date}T${time}:00`).toISOString();
-};
+// const combineDateAndTime = (date: string, time: string) => {
+//   // date = YYYY-MM-DD
+//   // time = HH:mm
+//   return new Date(`${date}T${time}:00`).toISOString();
+// };
 
-const calculateDurationHours = (start: string, end: string) => {
-  if (!start || !end) return 0;
+// const calculateDurationHours = (start: string, end: string) => {
+//   if (!start || !end) return 0;
 
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
+//   const [sh, sm] = start.split(":").map(Number);
+//   const [eh, em] = end.split(":").map(Number);
 
-  const startMinutes = sh * 60 + sm;
-  const endMinutes = eh * 60 + em;
+//   const startMinutes = sh * 60 + sm;
+//   const endMinutes = eh * 60 + em;
 
-  if (endMinutes <= startMinutes) return 0;
+//   if (endMinutes <= startMinutes) return 0;
 
-  return (endMinutes - startMinutes) / 60;
-};
+//   return (endMinutes - startMinutes) / 60;
+// };
 
 
 export default function Attendances() {
@@ -135,8 +135,8 @@ export default function Attendances() {
     teacherId: "",
     sessionId: "",
     presentStudentIds: [] as string[],
-    actualStartTime: "09:00",
-    actualEndTime: "10:00",
+    actualStartTime: "",
+    actualEndTime: "",
     durationHours: 1,
   });
 
@@ -155,8 +155,8 @@ export default function Attendances() {
         teacherId: attendance.teacherId,
         sessionId: attendance.sessionId,
         presentStudentIds: attendance.presentStudentIds,
-        actualStartTime: extractTime(attendance.actualStartTime),
-        actualEndTime: extractTime(attendance.actualEndTime),
+        actualStartTime: "",
+        actualEndTime: "",
         durationHours: attendance.durationHours,
       });
     } else {
@@ -180,20 +180,31 @@ export default function Attendances() {
       !formData.teacherId ||
       !formData.sessionId ||
       !formData.presentStudentIds ||
-      !formData.actualStartTime ||
-      !formData.actualEndTime
+      !formData.durationHours
     )
       return;
      const payload = {
-    ...formData,
-    actualStartTime: combineDateAndTime(
-      formData.date,
-      formData.actualStartTime
-    ),
-    actualEndTime: combineDateAndTime(
-      formData.date,
-      formData.actualEndTime
-    ),
+
+      date: formData.date,
+      teacherId: formData.teacherId,
+      sessionId: formData.sessionId,
+      presentStudentIds: formData.presentStudentIds,
+      durationHours: formData.durationHours,
+      actualStartTime: formData.actualStartTime
+      ? new Date(`${formData.date}T${formData.actualStartTime}:00`).toISOString()
+      : null,
+    actualEndTime: formData.actualEndTime
+      ? new Date(`${formData.date}T${formData.actualEndTime}:00`).toISOString()
+      : null,
+    // ...formData,
+    // actualStartTime: combineDateAndTime(
+    //   formData.date,
+    //   formData.actualStartTime
+    // ),
+    // actualEndTime: combineDateAndTime(
+    //   formData.date,
+    //   formData.actualEndTime
+    // ),
   };
     if (editingId) {
       await updateAttendance.mutateAsync({ id: editingId, data: payload });
@@ -332,7 +343,7 @@ export default function Attendances() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-sm font-medium">Start Time</label>
                 <Input
                   type="time"
@@ -370,7 +381,28 @@ export default function Attendances() {
                   }}
                   data-testid="input-session-end-time"
                 />
-              </div>
+              </div> */}
+
+              {/* Duration */}
+      <div className="space-y-3 col-span-2">
+        <label className="text-sm font-medium">Session Duration (Hours)</label>
+
+  {/* Quick buttons */}
+  <div className="flex flex-wrap gap-2">
+    {[0.5, 1, 1.5, 2, 2.5, 3].map((h) => (
+      <Button
+        key={h}
+        type="button"
+        variant={formData.durationHours === h ? "default" : "outline"}
+        onClick={() =>
+          setFormData((prev) => ({ ...prev, durationHours: h }))
+        }
+      >
+        {h} hr
+      </Button>
+    ))}
+  </div>
+  </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   Assign Students ({formData.presentStudentIds.length} selected)
@@ -410,7 +442,9 @@ export default function Attendances() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={createAttendace.isPending || updateAttendance.isPending}
+              disabled={ createAttendace.isPending ||
+    updateAttendance.isPending ||
+    !formData.durationHours}
               data-testid="button-submit-session"
             >
               {editingId ? "Save Changes" : "Create Session"}
@@ -485,8 +519,8 @@ export default function Attendances() {
                 <TableHead>Date</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Session</TableHead>
-                <TableHead>Start Time</TableHead>
-                <TableHead>End Time</TableHead>
+                {/* <TableHead>Start Time</TableHead>
+                <TableHead>End Time</TableHead> */}
                 <TableHead>Duration Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -518,7 +552,7 @@ export default function Attendances() {
                     </TableCell>
                     <TableCell>{teacher?.name || "Unassigned"}</TableCell>
                     <TableCell>{session?.name || "Unassigned"}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-3 w-3" />
                         {new Date(
@@ -528,8 +562,8 @@ export default function Attendances() {
                           minute: "2-digit",
                         })}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> */}
+                    {/* <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-3 w-3" />
                         {new Date(attendance.actualEndTime).toLocaleTimeString(
@@ -537,7 +571,7 @@ export default function Attendances() {
                           { hour: "2-digit", minute: "2-digit" }
                         )}
                       </div>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       {" "}
                       {formatDurationFromHours(
@@ -590,6 +624,7 @@ export default function Attendances() {
                   </TableRow>
                 );
               })}
+              
               {attendances.length === 0 && (
                 <TableRow>
                   <TableCell
