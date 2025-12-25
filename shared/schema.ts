@@ -17,15 +17,17 @@ export const teachers = pgTable("teachers", {
   email: text("email").notNull().unique(),
   mobile: varchar("mobile", { length: 8 }).notNull().unique(),
   password: text("password").notNull(),
+  
 });
 export const departments = pgTable("departments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  
 });
 export const students = pgTable("students", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  grade: text("grade").notNull(),
+  grade: text("grade").notNull(), 
 });
 
 export const sessions = pgTable("sessions", {

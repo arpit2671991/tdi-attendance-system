@@ -58,8 +58,8 @@ export default function Departments() {
       <div className="space-y-8 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-heading font-bold tracking-tight">Departments</h1>
-            <p className="text-muted-foreground">Manage department records.</p>
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Courses</h1>
+            <p className="text-muted-foreground">Manage Course Details.</p>
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
@@ -81,26 +81,26 @@ export default function Departments() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Departments</h1>
-          <p className="text-muted-foreground">Manage department records.</p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Course Details</h1>
+          <p className="text-muted-foreground">Manage Course Details.</p>
         </div>
         
         <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-student">
-          <Plus className="h-4 w-4" /> Create department
+          <Plus className="h-4 w-4" /> Create Course
         </Button>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Department' : 'Create New Department'}</DialogTitle>
+            <DialogTitle>{editingId ? 'Edit Course' : 'Create New Course'}</DialogTitle>
             <DialogDescription>
-              {editingId ? 'Update department details.' : 'Add a new department to the system.'}
+              {editingId ? 'Update course details.' : 'Add a new course to the system.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Department Name</label>
+              <label className="text-sm font-medium">Course Name</label>
               <Input 
                 placeholder="e.g. Mathematics" 
                 value={formData.name}
@@ -116,7 +116,7 @@ export default function Departments() {
               disabled={createDepartment.isPending || updateDepartment.isPending}
               data-testid="button-submit-department"
             >
-              {editingId ? 'Save Changes' : 'Create Department'}
+              {editingId ? 'Save Changes' : 'Create Course'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -124,11 +124,11 @@ export default function Departments() {
 
       <Card className="border-none shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg">Departments</CardTitle>
+          <CardTitle className="text-lg">Courses</CardTitle>
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search departments..." 
+              placeholder="Search courses..." 
               className="pl-8" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -140,7 +140,7 @@ export default function Departments() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Department Name</TableHead>
+                <TableHead>Course Name</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -178,7 +178,7 @@ export default function Departments() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will remove the department from the system and all enrolled sessions.
+                              This will remove the course from the system and all enrolled sessions.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -200,7 +200,7 @@ export default function Departments() {
               {filteredStudents.length === 0 && (
                  <TableRow>
                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                     No departments found.
+                     No courses found.
                    </TableCell>
                  </TableRow>
               )}

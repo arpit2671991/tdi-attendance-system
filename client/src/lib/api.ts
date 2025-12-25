@@ -17,7 +17,9 @@ import type {
 
 
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+// const API_BASE = import.meta.env.VITE_API_BASE;
+
+const API_BASE = process.env.NODE_ENV === "production" ? "api" : "http://localhost:5000/api";
 
 
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {

@@ -18,8 +18,8 @@ import { Button } from "@/components/ui/button";
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Admins', href: '/admins', icon: ShieldCheck },
-  { name: 'Teachers', href: '/teachers', icon: Users },
-  { name: 'Departments', href: '/departments', icon: GraduationCap },
+  { name: 'Instructors', href: '/teachers', icon: Users },
+  { name: 'Courses', href: '/departments', icon: GraduationCap },
   { name: 'Students', href: '/students', icon: GraduationCap },
   { name: 'Sessions', href: '/sessions', icon: CalendarDays },
   { name: 'Attendance', href: '/attendaces', icon: CalendarDays },

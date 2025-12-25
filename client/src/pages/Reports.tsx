@@ -182,9 +182,9 @@ export default function Reports() {
       </div>
 
       <Tabs defaultValue="teachers" className="w-full">
-        <TabsList className="no-print grid w-full md:w-[400px] grid-cols-1 mb-8">
+        <TabsList className="no-print grid w-full md:w-[400px] grid-cols-2 mb-8">
           <TabsTrigger value="teachers">Teacher Work Hours</TabsTrigger>
-          {/* <TabsTrigger value="students">Student Attendance</TabsTrigger> */}
+          <TabsTrigger value="students">Student Attendance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="teachers" className="space-y-6">
@@ -286,7 +286,7 @@ export default function Reports() {
           </div>
         </TabsContent>
 
-        {/* <TabsContent value="students" className="space-y-6">
+        <TabsContent value="students" className="space-y-6">
           <Card className="border-none shadow-sm bg-muted/30">
             <CardContent className="pt-6">
               <div className="no-print flex flex-col md:flex-row gap-4 items-end">
@@ -479,7 +479,7 @@ export default function Reports() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent> */}
+        </TabsContent>
       </Tabs>
     </div>
   );
