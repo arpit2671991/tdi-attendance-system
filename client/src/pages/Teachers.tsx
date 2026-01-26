@@ -1,20 +1,27 @@
-import { useState } from "react";
-import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher } from "@/lib/hooks";
+import { useState, useEffect, useRef } from "react";
+import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useBulkImportTeachers } from "@/lib/hooks";
 import type { Teacher } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Mail, BookOpen, Pencil, Trash2, Smartphone } from "lucide-react";
+import { Plus, Search, Mail, BookOpen, Pencil, Trash2, Smartphone, Upload } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import Papa from "papaparse";
 
 export default function Teachers() {
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const { data: teachers = [], isLoading } = useTeachers();
   const createTeacher = useCreateTeacher();
   const updateTeacher = useUpdateTeacher();
   const deleteTeacher = useDeleteTeacher();
+  const bulkImportTeachers = useBulkImportTeachers();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -27,6 +34,13 @@ export default function Teachers() {
     t.mobile.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+    const totalPages = Math.ceil(filteredTeachers.length / pageSize);
+
+const paginatedTeachers = filteredTeachers.slice(
+  (currentPage - 1) * pageSize,
+  currentPage * pageSize
+);
+
   const handleOpenDialog = (teacher?: Omit<Teacher, "password"> | Teacher) => {
     if (teacher) {
       setEditingId(teacher.id);
@@ -37,6 +51,46 @@ export default function Teachers() {
     } 
     setIsDialogOpen(true);
   };
+
+ const handleCsvUpload = (file: File) => {
+  setImportError(null);
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results) => {
+      try {
+        const teachers = (results.data as Record<string, string>[])
+          .map((row) => ({
+            name: row.name?.trim() || "",
+            email: row.email?.trim() || "",
+            mobile: row.mobile?.trim() || "",
+            password: row.password?.trim() || "",
+          }))
+          // Only include rows with all required fields
+          .filter((r) => r.name && r.email && r.mobile && r.password);
+
+        if (teachers.length === 0) {
+          setImportError("No valid teachers found in CSV");
+          return;
+        }
+
+        // Call your bulk import hook
+        await bulkImportTeachers.mutateAsync(teachers);
+
+        // Close the import dialog
+        setIsImportDialogOpen(false);
+      } catch (err) {
+        console.error(err);
+        setImportError("Failed to import teachers");
+      }
+    },
+    error: () => {
+      setImportError("Invalid CSV file");
+    },
+  });
+};
+
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.mobile) return;
@@ -61,6 +115,10 @@ export default function Teachers() {
   const handleDelete = async (id: string) => {
     await deleteTeacher.mutateAsync(id);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   if (isLoading) {
     return (
@@ -93,10 +151,19 @@ export default function Teachers() {
           <h1 className="text-3xl font-heading font-bold tracking-tight">Instructors</h1>
           <p className="text-muted-foreground">Manage faculty members.</p>
         </div>
-        
+         <div className=" flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-teacher">
           <Plus className="h-4 w-4" /> Add Instructor
         </Button>
+        <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setIsImportDialogOpen(true)}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -160,6 +227,62 @@ export default function Teachers() {
         </DialogContent>
       </Dialog>
 
+       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Instructors</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file.
+                  </DialogDescription>
+                </DialogHeader>
+            
+                <div className="space-y-4 py-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCsvUpload(file);
+                    }}
+                  />
+            
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={bulkImportTeachers.isPending}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Select CSV File
+                  </Button>
+            
+                  {bulkImportTeachers.isPending && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Importing instructors..
+                    </p>
+                  )}
+            
+                  {importError && (
+                    <p className="text-sm text-destructive text-center">
+                      {importError}
+                    </p>
+                  )}
+                </div>
+            
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsImportDialogOpen(false)}
+                    disabled={bulkImportTeachers.isPending}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
       <Card className="border-none shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg">Faculty List</CardTitle>
@@ -185,7 +308,7 @@ export default function Teachers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTeachers.map((teacher) => (
+              {paginatedTeachers.map((teacher) => (
                 <TableRow key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
@@ -258,6 +381,32 @@ export default function Teachers() {
               )}
             </TableBody>
           </Table>
+            <div className="flex justify-between items-center mt-4">
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+          
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+          
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+          
         </CardContent>
       </Card>
     </div>

@@ -20,7 +20,8 @@ declare module "http" {
 
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000", // frontend URL
+  // origin: process.env.FRONTEND_URL || "http://localhost:3000", // frontend URL
+  origin: true,
   credentials: true,               // allow cookies/session
 }));
 app.use(
@@ -32,6 +33,8 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+app.set("trust proxy", 1); // trust first proxy
 
 app.use(
   session({

@@ -2,8 +2,7 @@ import { useState } from "react";
 import {
   useTeachers,
   useStudents,
-  useTeacherWorkHours,
-  useStudentAttendanceReport,
+
 } from "@/lib/hooks";
 import {
   Card,
@@ -130,7 +129,6 @@ export default function Reports() {
       return {
         id: record.studentId,
         name: student?.name || "Unknown",
-        grade: student?.grade || "N/A",
         rate: record.total > 0 ? (record.present / record.total) * 100 : 0,
         present: record.present,
         total: record.total,

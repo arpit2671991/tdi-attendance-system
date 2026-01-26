@@ -59,11 +59,11 @@ export default function Login() {
           <div className="flex justify-center mb-6">
             <div className="h-32 w-32 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20">
               {/* <School className="h-8 w-8 text-primary-foreground" /> */}
-              <img src="../../public/tdi-logo.jpeg" alt="TDI Logo" className="h-30 w-30 object-contain" />
+              <img src="../../public/new-logo.png" alt="TDI Logo" className="h-30 w-30 object-contain" />
             </div>
           </div>
           <h1 className="text-3xl font-heading font-bold text-gray-900">Technology Domain Institute</h1>
-          <p className="text-muted-foreground">Smart Attendance System</p>
+          <p className="text-muted-foreground">Management System</p>
         </div>
 
         <Tabs defaultValue="admin" className="w-full">

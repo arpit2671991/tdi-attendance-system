@@ -19,6 +19,17 @@ import NotFound from "@/pages/not-found";
 
 import Admins from "@/pages/Admins";
 import Attendances from "./pages/Attendaces";
+import DepartmentLevels from "./pages/DepartmentLevel";
+import DepartmentHours from "./pages/DepartmentHour";
+import SessionEnrollmentsPage from "./pages/SessionEnrollments";
+import { Notification } from "./pages/Notification";
+import StudentAttendanceReport from "./pages/StudentAttendanceReport";
+import TeacherAttendanceReports from "./pages/TeacherAttendanceReports";
+import StudentAttendanceReports from "./pages/StudentAttendanceReports";
+import TeachersPayroll from "./pages/TeacherPayroll";
+import StudentsCourseHours from "./pages/StudentCourseHours";
+import { TeacherCalendarAgenda } from "./pages/TeacherCalendarAgenda";
+import { DailyAgenda } from "./pages/DailyAgenda";
 
 // Protected Route Wrapper
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
@@ -77,22 +88,49 @@ function Router() {
       <Route path="/students">
         <ProtectedRoute component={Students} allowedRoles={['admin']} />
       </Route>
-      <Route path="/departments">
+      <Route path="/course-levels">
+        <ProtectedRoute component={DepartmentLevels} allowedRoles={['admin']} />
+      </Route>
+       <Route path="/course-hours">
+        <ProtectedRoute component={DepartmentHours} allowedRoles={['admin']} />
+      </Route>
+      <Route path="/courses">
         <ProtectedRoute component={Departments} allowedRoles={['admin']} />
       </Route>
-      <Route path="/sessions">
+      <Route path="/classes">
         <ProtectedRoute component={Sessions} allowedRoles={['admin']} />
+      </Route>
+      <Route path="/sessions/:sessionId/enrollments">
+        <ProtectedRoute component={SessionEnrollmentsPage} allowedRoles={['admin']} />
       </Route>
         <Route path="/attendaces">
         <ProtectedRoute component={Attendances} allowedRoles={['admin']} />
       </Route>
-      
+    
+        <Route path="/notifications">
+        <ProtectedRoute component={Notification} allowedRoles={['admin']} />
+      </Route>
       {/* Shared/Teacher Routes */}
-      <Route path="/reports">
-        <ProtectedRoute component={Reports} allowedRoles={['admin', 'teacher']} />
+      <Route path="/teacher-attendance-records">
+        <ProtectedRoute component={TeacherAttendanceReports} allowedRoles={['admin', 'teacher']} />
+      </Route>
+       <Route path="/student-attendance-records">
+        <ProtectedRoute component={StudentAttendanceReports} allowedRoles={['admin', 'teacher']} />
+      </Route>
+       <Route path="/teachers-payroll">
+        <ProtectedRoute component={TeachersPayroll} allowedRoles={['admin', 'teacher']} />
+      </Route>
+       <Route path="/studentcourse-hour">
+        <ProtectedRoute component={StudentsCourseHours} allowedRoles={['admin', 'teacher']} />
       </Route>
       <Route path="/portal">
         <ProtectedRoute component={TeacherPortal} allowedRoles={['teacher']} />
+      </Route>
+      <Route path="/teacher-calendar">
+        <ProtectedRoute component={TeacherCalendarAgenda} allowedRoles={['teacher']} />
+      </Route>
+      <Route path="/Daily-Agenda">
+        <ProtectedRoute component={DailyAgenda} allowedRoles={['admin']} />
       </Route>
 
       <Route component={NotFound} />

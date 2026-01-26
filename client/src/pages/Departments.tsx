@@ -1,20 +1,29 @@
-import { useState } from "react";
-import {  useDeleteStudent, useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from "@/lib/hooks";
+import { useRef, useState } from "react";
+import {  useDeleteStudent, useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment, useStudents, useBulkImportDepartmentCourses } from "@/lib/hooks";
 import type { Department, Student } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, User, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, User, Pencil, Trash2, Upload } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import Papa from "papaparse";
 
 export default function Departments() {
+
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+ 
   const { data: departments = [], isLoading } = useDepartments();
   const createDepartment = useCreateDepartment();
   const updateDepartment = useUpdateDepartment();
   const deleteDepartment   = useDeleteDepartment();
+   const bulkImportDepartmentCourses = useBulkImportDepartmentCourses();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -26,6 +35,38 @@ export default function Departments() {
     d.name.toLowerCase().includes(searchTerm.toLowerCase()) 
    
   );
+
+  const handleCsvUpload = (file: File) => {
+    setImportError(null);
+  
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const name = (results.data as any[])
+            .map((row) => ({
+              name: row.name?.trim(),
+            }))
+            .filter((r) => r.name);
+  
+          if (name.length === 0) {
+            setImportError("No valid courses found in CSV");
+            return;
+          }
+  
+          await bulkImportDepartmentCourses.mutateAsync(name);
+          setIsImportDialogOpen(false);
+        } catch (err) {
+          console.error(err);
+          setImportError("Failed to import course levels");
+        }
+      },
+      error: () => {
+        setImportError("Invalid CSV file");
+      },
+    });
+  };
 
   const handleOpenDialog = (department?: Department) => {
     if (department) {
@@ -59,7 +100,7 @@ export default function Departments() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-heading font-bold tracking-tight">Courses</h1>
-            <p className="text-muted-foreground">Manage Course Details.</p>
+            <p className="text-muted-foreground">Manage Courses</p>
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
@@ -81,13 +122,22 @@ export default function Departments() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Course Details</h1>
-          <p className="text-muted-foreground">Manage Course Details.</p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Courses</h1>
+          <p className="text-muted-foreground">Manage Courses</p>
         </div>
-        
+         <div className=" flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Button className="gap-2" onClick={() => handleOpenDialog()} data-testid="button-add-student">
           <Plus className="h-4 w-4" /> Create Course
         </Button>
+         <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            <Upload className="h-4 w-4" />
+            Import CSV
+          </Button>
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -117,6 +167,62 @@ export default function Departments() {
               data-testid="button-submit-department"
             >
               {editingId ? 'Save Changes' : 'Create Course'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Courses</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with a <strong>name</strong> column.
+            </DialogDescription>
+          </DialogHeader>
+      
+          <div className="space-y-4 py-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleCsvUpload(file);
+              }}
+            />
+      
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={bulkImportDepartmentCourses.isPending}
+            >
+              <Upload className="h-4 w-4" />
+              Select CSV File
+            </Button>
+      
+            {bulkImportDepartmentCourses.isPending && (
+              <p className="text-sm text-muted-foreground text-center">
+                Importing courses..
+              </p>
+            )}
+      
+            {importError && (
+              <p className="text-sm text-destructive text-center">
+                {importError}
+              </p>
+            )}
+          </div>
+      
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(false)}
+              disabled={bulkImportDepartmentCourses.isPending}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
