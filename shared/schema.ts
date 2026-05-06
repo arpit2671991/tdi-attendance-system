@@ -70,6 +70,7 @@ export const sessions = pgTable("sessions", {
   endTime: text("end_time").notNull(),     // HH:mm
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   endDate: text("end_date").notNull(),     // YYYY-MM-DD
+  daysOfWeek: integer("days_of_week").array().notNull().default(sql`'{}'::integer[]`),
 
   // studentIds: text("student_ids").array().notNull().default(sql`ARRAY[]::text[]`),
 });
@@ -188,7 +189,11 @@ export const insertDepartmentLevelSchema = createInsertSchema(department_levels)
 export const insertDepartmentHourSchema = createInsertSchema(department_hours).omit({ id: true });  
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true });
 export const insertStudentSchema = createInsertSchema(students).omit({ id: true });
-export const insertSessionSchema = createInsertSchema(sessions).omit({ id: true });
+// export const insertSessionSchema = createInsertSchema(sessions).omit({ id: true });
+export const insertSessionSchema = createInsertSchema(sessions, {
+  // Explicitly define daysOfWeek as a number array to prevent validation stripping
+  daysOfWeek: z.array(z.number()).default([]),
+}).omit({ id: true });
 // export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true });
 export const insertSessionStudentSchema = createInsertSchema(sessionStudents).omit({id: true});
 

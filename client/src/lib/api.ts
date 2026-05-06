@@ -260,14 +260,24 @@ getAllExceptions: (date: string) => {
       method: "DELETE" 
     });
   },
-
-  getDailySchedule: (date: string, teacherId?: string) => {
+getDailySchedule: (date: string, teacherId?: string) => {
     const params = new URLSearchParams({ date });
-    if (teacherId && teacherId !== "undefined") {
+    
+    // Ensure we don't send "undefined" or empty strings as actual filter values
+    if (teacherId && teacherId !== "undefined" && teacherId !== "") {
       params.append("teacherId", teacherId);
     }
+
+    // Now returns ScheduledSession[] which includes sessionStudents
     return fetchApi<any[]>(`/schedule/daily?${params.toString()}`);
   },
+  // getDailySchedule: (date: string, teacherId?: string) => {
+  //   const params = new URLSearchParams({ date });
+  //   if (teacherId && teacherId !== "undefined") {
+  //     params.append("teacherId", teacherId);
+  //   }
+  //   return fetchApi<any[]>(`/schedule/daily?${params.toString()}`);
+  // },
 bulkImport: (rows: any[]) =>
     fetchApi<{
       success: boolean;

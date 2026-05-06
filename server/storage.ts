@@ -313,13 +313,28 @@ export class DatabaseStorage implements IStorage {
   async getSessionsByDepartment(departmentId: string): Promise<Session[]> {
     return await db.select().from(schema.sessions).where(eq(schema.sessions.departmentId, departmentId));
   }
+  // async createSession(session: InsertSession): Promise<Session> {
+  //   const result = await db.insert(schema.sessions).values(session).returning();
+  //   return result[0];
+  // }
+
+  // async updateSession(id: string, session: Partial<InsertSession>): Promise<Session | undefined> {
+  //   const result = await db.update(schema.sessions).set(session).where(eq(schema.sessions.id, id)).returning();
+  //   return result[0];
+  // }
+
   async createSession(session: InsertSession): Promise<Session> {
+    // Drizzle will now include daysOfWeek in the insert if it's in your InsertSession type
     const result = await db.insert(schema.sessions).values(session).returning();
     return result[0];
   }
 
   async updateSession(id: string, session: Partial<InsertSession>): Promise<Session | undefined> {
-    const result = await db.update(schema.sessions).set(session).where(eq(schema.sessions.id, id)).returning();
+    const result = await db
+      .update(schema.sessions)
+      .set(session)
+      .where(eq(schema.sessions.id, id))
+      .returning();
     return result[0];
   }
 
@@ -367,58 +382,190 @@ export class DatabaseStorage implements IStorage {
     await db.delete(schema.sessionExceptions).where(eq(schema.sessionExceptions.id, id));
   }
 
+// async getDailySchedule(targetDate: string, teacherId?: string) {
+//   // 1. Build the base conditions for date range
+//   const conditions = [
+//     lte(schema.sessions.startDate, targetDate),
+//     gte(schema.sessions.endDate, targetDate)
+//   ];
+
+//   // 2. Add teacher filter as a RAW STRING (since it's varchar)
+//   // We check for "undefined" as a string because some frontend clients 
+//   // might literally send the string "undefined" in the URL.
+//   if (teacherId && teacherId !== "undefined" && teacherId !== "") {
+//     // REMOVED: parseInt()
+//     conditions.push(eq(schema.sessions.teacherId, teacherId));
+//   }
+
+//   const results = await db
+//     .select({
+//       session: schema.sessions,
+//       exception: schema.sessionExceptions,
+//     })
+//     .from(schema.sessions)
+//     .leftJoin(
+//       schema.sessionExceptions,
+//       and(
+//         eq(schema.sessionExceptions.sessionId, schema.sessions.id),
+//         eq(schema.sessionExceptions.exceptionDate, targetDate)
+//       )
+//     )
+//     .where(and(...conditions))
+//     .orderBy(asc(schema.sessions.name));
+
+//   return results.map(({ session, exception }) => {
+//     if (exception) {
+//       return {
+//         ...session,
+//         status: exception.status,
+//         startTime: exception.overrideStartTime || session.startTime,
+//         endTime: exception.overrideEndTime || session.endTime,
+//         isException: true,
+//         reason: exception.reason,
+//       };
+//     }
+
+//     return {
+//       ...session,
+//       status: "scheduled" as const,
+//       isException: false,
+//       reason: null,
+//     };
+//   });
+// }
+
+
+// async getDailySchedule(targetDate: string, teacherId?: string) {
+//   const conditions = [
+//     lte(schema.sessions.startDate, targetDate),
+//     gte(schema.sessions.endDate, targetDate)
+//   ];
+
+//   if (teacherId && teacherId !== "undefined" && teacherId !== "") {
+//     conditions.push(eq(schema.sessions.teacherId, teacherId));
+//   }
+
+//   const results = await db
+//     .select({
+//       session: schema.sessions,
+//       exception: schema.sessionExceptions,
+//       student: schema.students, // Add the student record
+//     })
+//     .from(schema.sessions)
+//     .leftJoin(
+//       schema.sessionExceptions,
+//       and(
+//         eq(schema.sessionExceptions.sessionId, schema.sessions.id),
+//         eq(schema.sessionExceptions.exceptionDate, targetDate)
+//       )
+//     )
+//     // Join the bridge table
+//     .leftJoin(schema.sessionStudents, eq(schema.sessionStudents.sessionId, schema.sessions.id))
+//     // Join the actual student table
+//     .leftJoin(schema.students, eq(schema.students.id, schema.sessionStudents.studentId))
+//     .where(and(...conditions))
+//     .orderBy(asc(schema.sessions.name));
+
+//   // 2. Group the results (Drizzle returns 1 row per student join)
+//   const sessionMap = new Map<string, any>();
+
+//   results.forEach(({ session, exception, student }) => {
+//     if (!sessionMap.has(session.id)) {
+//       const baseSession = exception ? {
+//         ...session,
+//         status: exception.status,
+//         startTime: exception.overrideStartTime || session.startTime,
+//         endTime: exception.overrideEndTime || session.endTime,
+//         isException: true,
+//         reason: exception.reason,
+//         sessionStudents: [] // Initialize empty array
+//       } : {
+//         ...session,
+//         status: "scheduled" as const,
+//         isException: false,
+//         reason: null,
+//         sessionStudents: []
+//       };
+//       sessionMap.set(session.id, baseSession);
+//     }
+
+//     // Add student to the array if they exist for this session row
+//     if (student) {
+//       sessionMap.get(session.id).sessionStudents.push({ student });
+//     }
+//   });
+
+//   return Array.from(sessionMap.values());
+// }
+
+
 async getDailySchedule(targetDate: string, teacherId?: string) {
-  // 1. Build the base conditions for date range
-  const conditions = [
-    lte(schema.sessions.startDate, targetDate),
-    gte(schema.sessions.endDate, targetDate)
-  ];
+    // 1. Calculate the day of the week for the targetDate (0-6)
+    // Important: Ensure the date parsing is consistent
+    const dateObj = new Date(targetDate);
+    const dayOfWeek = dateObj.getDay(); 
 
-  // 2. Add teacher filter as a RAW STRING (since it's varchar)
-  // We check for "undefined" as a string because some frontend clients 
-  // might literally send the string "undefined" in the URL.
-  if (teacherId && teacherId !== "undefined" && teacherId !== "") {
-    // REMOVED: parseInt()
-    conditions.push(eq(schema.sessions.teacherId, teacherId));
-  }
+    const conditions = [
+      lte(schema.sessions.startDate, targetDate),
+      gte(schema.sessions.endDate, targetDate),
+      // NEW LOGIC: Only fetch sessions where daysOfWeek is empty OR contains today's day
+      sql`(${schema.sessions.daysOfWeek} IS NULL OR 
+           cardinality(${schema.sessions.daysOfWeek}) = 0 OR 
+           ${dayOfWeek} = ANY(${schema.sessions.daysOfWeek}))`
+    ];
 
-  const results = await db
-    .select({
-      session: schema.sessions,
-      exception: schema.sessionExceptions,
-    })
-    .from(schema.sessions)
-    .leftJoin(
-      schema.sessionExceptions,
-      and(
-        eq(schema.sessionExceptions.sessionId, schema.sessions.id),
-        eq(schema.sessionExceptions.exceptionDate, targetDate)
-      )
-    )
-    .where(and(...conditions))
-    .orderBy(asc(schema.sessions.name));
-
-  return results.map(({ session, exception }) => {
-    if (exception) {
-      return {
-        ...session,
-        status: exception.status,
-        startTime: exception.overrideStartTime || session.startTime,
-        endTime: exception.overrideEndTime || session.endTime,
-        isException: true,
-        reason: exception.reason,
-      };
+    if (teacherId && teacherId !== "undefined" && teacherId !== "") {
+      conditions.push(eq(schema.sessions.teacherId, teacherId));
     }
 
-    return {
-      ...session,
-      status: "scheduled" as const,
-      isException: false,
-      reason: null,
-    };
-  });
-}
+    const results = await db
+      .select({
+        session: schema.sessions,
+        exception: schema.sessionExceptions,
+        student: schema.students,
+      })
+      .from(schema.sessions)
+      .leftJoin(
+        schema.sessionExceptions,
+        and(
+          eq(schema.sessionExceptions.sessionId, schema.sessions.id),
+          eq(schema.sessionExceptions.exceptionDate, targetDate)
+        )
+      )
+      .leftJoin(schema.sessionStudents, eq(schema.sessionStudents.sessionId, schema.sessions.id))
+      .leftJoin(schema.students, eq(schema.students.id, schema.sessionStudents.studentId))
+      .where(and(...conditions))
+      .orderBy(asc(schema.sessions.name));
 
+    const sessionMap = new Map<string, any>();
+
+    results.forEach(({ session, exception, student }) => {
+      if (!sessionMap.has(session.id)) {
+        const baseSession = exception ? {
+          ...session,
+          status: exception.status,
+          startTime: exception.overrideStartTime || session.startTime,
+          endTime: exception.overrideEndTime || session.endTime,
+          isException: true,
+          reason: exception.reason,
+          sessionStudents: []
+        } : {
+          ...session,
+          status: "scheduled" as const,
+          isException: false,
+          reason: null,
+          sessionStudents: []
+        };
+        sessionMap.set(session.id, baseSession);
+      }
+
+      if (student) {
+        sessionMap.get(session.id).sessionStudents.push({ student });
+      }
+    });
+
+    return Array.from(sessionMap.values());
+  }
   // Session Entrollment Methods
   async getAllSessionEntrollments(filters?: {
   sessionId?: string;
@@ -934,6 +1081,56 @@ async bulkInsertClassesFromCsv(rows: any[]){
   
 }
 
+
+// --- UPDATED BULK CLASSES IMPORT ---
+  // async bulkInsertClassesFromCsv(rows: any[]) {
+  //   const validSessions = [];
+  //   const errors: any = [];
+
+  //   for (let i = 0; i < rows.length; i++) {
+  //     const r = rows[i];
+  //     const teacherId = await getTeacherIdByName(r.teacher);
+  //     const departmentId = await getCourseIdByName(r.course);
+      
+  //     if (!teacherId || !departmentId) {
+  //       errors.push({
+  //         row: i + 2,
+  //         reason: "Invalid teacher/course",
+  //       });
+  //       continue;
+  //     }
+
+  //     // Handle daysOfWeek from CSV if provided (expects comma separated numbers "1,3,5")
+  //     let daysArr: number[] = [];
+  //     if (r.daysOfWeek) {
+  //       daysArr = r.daysOfWeek.split(',').map((d: string) => parseInt(d.trim())).filter((n: number) => !isNaN(n));
+  //     }
+
+  //     validSessions.push({
+  //       name: r.name.trim(),
+  //       session_type: r.session_type?.trim() || "private",
+  //       teacherId,
+  //       departmentId,
+  //       startTime: r.startTime,
+  //       endTime: r.endTime,
+  //       startDate: r.startDate,
+  //       endDate: r.endDate,
+  //       daysOfWeek: daysArr, // Pass the array here
+  //     });
+  //   }
+
+  //   if (validSessions.length) {
+  //     await db
+  //       .insert(schema.sessions)
+  //       .values(validSessions)
+  //       .onConflictDoNothing();
+  //   }
+  //   return {
+  //     inserted: validSessions.length,
+  //     failed: errors.length,
+  //     errors,
+  //   };
+  // }
 
 }
 

@@ -280,7 +280,7 @@ const handleSubmit = async () => {
             <div className="space-y-3">
               <label className="text-sm font-bold text-slate-700">How long was today's class?</label>
               <div className="flex flex-wrap gap-2">
-                {[0.5, 1, 1.5, 2, 2.5, 3, 4].map(h => (
+                {[0.2, 0.5, 1, 1.5, 2, 2.5, 3, 4].map(h => (
                   <Button 
                     key={h} 
                     variant={durationHours === h ? "default" : "outline"} 

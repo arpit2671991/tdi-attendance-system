@@ -853,16 +853,39 @@ export function useDailySchedule(date: string, teacherId?: string | number) {
     // This creates separate cache entries for Admin (undefined) vs Teacher (ID)
     queryKey: ["schedule", "daily", date, teacherId?.toString()],
     
-    queryFn: () => sessionApi.getDailySchedule(date, teacherId?.toString()),
+    // Explicitly typing the query function return based on our new API structure
+    queryFn: async () => {
+      const data = await sessionApi.getDailySchedule(date, teacherId?.toString());
+      return data;
+    },
     
     // Only run if we have a date. 
-    // Note: We don't require teacherId here so it works for Admin.
     enabled: !!date, 
     
-    // Keep the dashboard live
+    // Keep the dashboard live - 5 minute refetch
     refetchInterval: 1000 * 60 * 5, 
+
+    // Optional: Add placeholder or initial data logic if needed
+    staleTime: 1000 * 30, // Consider data fresh for 30 seconds
   });
 }
+
+// export function useDailySchedule(date: string, teacherId?: string | number) {
+//   return useQuery({
+//     // We include teacherId in the queryKey. 
+//     // This creates separate cache entries for Admin (undefined) vs Teacher (ID)
+//     queryKey: ["schedule", "daily", date, teacherId?.toString()],
+    
+//     queryFn: () => sessionApi.getDailySchedule(date, teacherId?.toString()),
+    
+//     // Only run if we have a date. 
+//     // Note: We don't require teacherId here so it works for Admin.
+//     enabled: !!date, 
+    
+//     // Keep the dashboard live
+//     refetchInterval: 1000 * 60 * 5, 
+//   });
+// }
 
 export const useBulkImportStudents = () => {
   const queryClient = useQueryClient();
